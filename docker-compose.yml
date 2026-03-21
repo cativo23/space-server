@@ -49,8 +49,13 @@ services:
     restart: unless-stopped
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    ports:
-      - "9090:9090"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.cativo.dev`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.prometheus.middlewares=auth@file"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
     networks:
       - web
   grafana:
