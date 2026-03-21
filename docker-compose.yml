@@ -1,14 +1,30 @@
 version: '3.9'
 
 services:
+  dockerproxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: dockerproxy
+    environment:
+      - CONTAINERS=1
+      - NETWORKS=1
+      - SERVICES=1
+      - SWARM=1
+      - TASKS=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - web
+    restart: unless-stopped
+
   traefik:
     image: traefik:v3.6
     container_name: traefik
     ports:
       - "80:80"
       - "443:443"
+    depends_on:
+      - dockerproxy
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./traefik/traefik.yml:/etc/traefik/traefik.yml:ro"
       - "./traefik/dynamic/auth.yml:/etc/traefik/dynamic/auth.yml:ro"
       - "./traefik/letsencrypt:/letsencrypt"

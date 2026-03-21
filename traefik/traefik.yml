@@ -15,6 +15,7 @@ entryPoints:
 
 providers:
   docker:
+    endpoint: "tcp://dockerproxy:2375"
     watch: true
     exposedByDefault: false
   file:
