@@ -1,0 +1,36 @@
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    watch: true
+    exposedByDefault: false
+  file:
+    filename: /etc/traefik/dynamic/auth.yml
+    watch: true
+
+api:
+  dashboard: true
+  insecure: false
+
+metrics:
+  prometheus:
+    entryPoint: web
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    addRoutersLabels: true
+
+certificatesResolvers:
+  letsencryptresolver:
+    acme:
+      email: "cativo23.kt@gmail.com"
+      storage: "/letsencrypt/acme.json"
+      tlsChallenge: {}
+log:
+  level: DEBUG
+
+ping:
+  entryPoint: web
