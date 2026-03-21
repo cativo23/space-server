@@ -10,6 +10,8 @@ entryPoints:
     address: ":443"
   metrics:
     address: ":8082"
+  ping:
+    address: ":8081"
 
 providers:
   docker:
@@ -40,4 +42,4 @@ log:
   level: WARN
 
 ping:
-  entryPoint: web
+  entryPoint: ping

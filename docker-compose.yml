@@ -23,7 +23,7 @@ services:
       - web
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/ping"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/ping"]
       interval: 10s
       timeout: 3s
       retries: 3
