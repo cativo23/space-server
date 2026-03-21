@@ -6,3 +6,6 @@ traefik/letsencrypt/acme.json
 
 # Grafana persistent data
 grafana-data/
+
+# Blog posts
+blog/
