@@ -37,7 +37,7 @@ certificatesResolvers:
       storage: "/letsencrypt/acme.json"
       tlsChallenge: {}
 log:
-  level: DEBUG
+  level: WARN
 
 ping:
   entryPoint: web
