@@ -4,3 +4,11 @@ http:
       basicAuth:
         users:
           - "admin:$apr1$.Dm1n6lI$nirsFCp2m2JCZ.wiHYtqz."
+    security-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        forceSTSHeader: true
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true

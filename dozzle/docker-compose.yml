@@ -10,7 +10,7 @@ services:
         - "traefik.http.routers.dozzle.rule=Host(`dozzle.cativo.dev`)"
         - "traefik.http.routers.dozzle.entrypoints=websecure"
         - "traefik.http.routers.dozzle.tls.certresolver=letsencryptresolver"
-        - "traefik.http.routers.dozzle.middlewares=auth@file"
+        - "traefik.http.routers.dozzle.middlewares=auth@file,security-headers@file"
       networks:
         - space-server_web
 

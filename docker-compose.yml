@@ -17,7 +17,7 @@ services:
       - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.cativo.dev`)"
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      - "traefik.http.routers.traefik-dashboard.middlewares=auth@file"
+      - "traefik.http.routers.traefik-dashboard.middlewares=auth@file,security-headers@file"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencryptresolver"
     networks:
       - web
@@ -38,7 +38,7 @@ services:
       - "traefik.http.routers.whoami.tls=true"
       - "traefik.http.routers.whoami.tls.certresolver=letsencryptresolver"
       - "traefik.http.middlewares.strip-whoami.stripprefix.prefixes=/whoami"
-      - "traefik.http.routers.whoami.middlewares=strip-whoami"
+      - "traefik.http.routers.whoami.middlewares=strip-whoami,security-headers@file"
     networks:
       - web
     restart: unless-stopped
@@ -54,7 +54,7 @@ services:
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.cativo.dev`)"
       - "traefik.http.routers.prometheus.entrypoints=websecure"
       - "traefik.http.routers.prometheus.tls.certresolver=letsencryptresolver"
-      - "traefik.http.routers.prometheus.middlewares=auth@file"
+      - "traefik.http.routers.prometheus.middlewares=auth@file,security-headers@file"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
     networks:
       - web
@@ -76,6 +76,7 @@ services:
     - "traefik.http.routers.grafana.entrypoints=websecure"
     - "traefik.http.routers.grafana.tls=true"
     - "traefik.http.routers.grafana.tls.certresolver=letsencryptresolver"
+    - "traefik.http.routers.grafana.middlewares=security-headers@file"
     - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     networks:
       - web

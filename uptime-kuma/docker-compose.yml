@@ -12,6 +12,7 @@ services:
       - "traefik.http.routers.uptime.rule=Host(`uptime.cativo.dev`)"
       - "traefik.http.routers.uptime.entrypoints=websecure"
       - "traefik.http.routers.uptime.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.uptime.middlewares=security-headers@file"
     networks:
       - space-server_web
 
