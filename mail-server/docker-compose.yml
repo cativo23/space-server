@@ -61,16 +61,18 @@ services:
   webmail:
     image: roundcube/roundcubemail:latest
     container_name: webmail
-    entrypoint: /bin/sh
-    command: >
-      -c "echo '<?php
-      \$config['plugins'] = [];
-      \$config['imap_host'] = 'mail:143';
-      \$config['smtp_host'] = 'mail:587';
-      \$config['smtp_port'] = 587;
-      \$config['db_dsnw'] = \"sqlite:////var/roundcube/db/db.sqlite\";
-      \$config['skin'] = 'elastic';
-      ' > /var/www/html/config/config.docker.inc.php && exec apache2-foreground"
+    entrypoint: /bin/sh -c
+    command:
+      - |
+        echo '<?php
+        $config["plugins"] = [];
+        $config["imap_host"] = "mail:143";
+        $config["smtp_host"] = "mail:587";
+        $config["smtp_port"] = 587;
+        $config["db_dsnw"] = "sqlite:////var/roundcube/db/db.sqlite";
+        $config["skin"] = "elastic";
+        ' > /var/www/html/config/config.docker.inc.php
+        exec /docker-entrypoint.sh apache2-foreground
     networks:
       - web
     volumes:
