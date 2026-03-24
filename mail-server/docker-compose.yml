@@ -62,15 +62,13 @@ services:
     image: roundcube/roundcubemail:latest
     container_name: webmail
     environment:
+      # Plain IMAP/SMTP - SSL only for web (Traefik), internal traffic is private
       - ROUNDCUBEMAIL_DEFAULT_HOST=mail
       - ROUNDCUBEMAIL_DEFAULT_PORT=143
       - ROUNDCUBEMAIL_SMTP_SERVER=mail
       - ROUNDCUBEMAIL_SMTP_PORT=587
       - ROUNDCUBEMAIL_SKIN=elastic
       - ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,managesieve
-      # No TLS internally - all traffic stays on private Docker network
-      - ROUNDCUBEMAIL_DEFAULT_IMAP_TLS=
-      - ROUNDCUBEMAIL_DEFAULT_SMTP_TLS=
     networks:
       - web
     volumes:
