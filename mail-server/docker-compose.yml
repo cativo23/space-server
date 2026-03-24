@@ -25,7 +25,8 @@ services:
       # Accounts (format: user|password|uid:gid)
       - OVERRIDES_ACCOUNTS=${MAIL_ACCOUNTS}
 
-      # Security
+      # Security - Generate self-signed certs
+      - ONE_DIR=1
       - PERMIT_DOCKER=network
       - ENABLE_FAIL2BAN=1
       - FAIL2BAN_BLOCKTYPE=drop
@@ -67,6 +68,8 @@ services:
       - ROUNDCUBEMAIL_SMTP_PORT=587
       - ROUNDCUBEMAIL_SKIN=elastic
       - ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,managesieve
+      - ROUNDCUBEMAIL_DEFAULT_IMAP_TLS=required
+      - ROUNDCUBEMAIL_DEFAULT_SMTP_TLS=required
     networks:
       - web
     volumes:
