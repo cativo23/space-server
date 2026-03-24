@@ -61,19 +61,15 @@ services:
   webmail:
     image: roundcube/roundcubemail:latest
     container_name: webmail
-    environment:
-      # Force plain IMAP/SMTP settings
-      - ROUNDCUBEMAIL_DEFAULT_HOST=mail
-      - ROUNDCUBEMAIL_DEFAULT_PORT=143
-      - ROUNDCUBEMAIL_SMTP_SERVER=mail
-      - ROUNDCUBEMAIL_SMTP_PORT=587
-    entrypoint: /bin/sh -c "echo '<?php
-    \$config['plugins'] = [];
-    \$config['imap_host'] = 'mail:143';
-    \$config['smtp_host'] = 'mail:587';
-    \$config['smtp_port'] = 587;
-    \$config['db_dsnw'] = 'sqlite:////var/roundcube/db/db.sqlite';
-    ' > /var/www/html/config/config.docker.inc.php && /docker-entrypoint.sh"
+    command: >
+      sh -c "echo '<?php
+      \$config['plugins'] = [];
+      \$config['imap_host'] = 'mail:143';
+      \$config['smtp_host'] = 'mail:587';
+      \$config['smtp_port'] = 587;
+      \$config['db_dsnw'] = \"sqlite:////var/roundcube/db/db.sqlite\";
+      \$config['skin'] = 'elastic';
+      ' > /var/www/html/config/config.docker.inc.php && apache2-foreground"
     networks:
       - web
     volumes:
