@@ -62,22 +62,22 @@ services:
     image: roundcube/roundcubemail:latest
     container_name: webmail
     environment:
-      # Plain IMAP/SMTP - SSL only for web (Traefik), internal traffic is private
+      # Force plain IMAP/SMTP settings
       - ROUNDCUBEMAIL_DEFAULT_HOST=mail
       - ROUNDCUBEMAIL_DEFAULT_PORT=143
       - ROUNDCUBEMAIL_SMTP_SERVER=mail
       - ROUNDCUBEMAIL_SMTP_PORT=587
-      - ROUNDCUBEMAIL_SKIN=elastic
-      - ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,managesieve
-      # Disable TLS for internal connections
-      - ROUNDCUBEMAIL_DEFAULT_IMAP_TLS=
-      - ROUNDCUBEMAIL_DEFAULT_SMTP_TLS=
-      - ROUNDCUBEMAIL_SMTP_USER=
+    entrypoint: /bin/sh -c "echo '<?php
+    \$config['plugins'] = [];
+    \$config['imap_host'] = 'mail:143';
+    \$config['smtp_host'] = 'mail:587';
+    \$config['smtp_port'] = 587;
+    \$config['db_dsnw'] = 'sqlite:////var/roundcube/db/db.sqlite';
+    ' > /var/www/html/config/config.docker.inc.php && /docker-entrypoint.sh"
     networks:
       - web
     volumes:
       - webmail-data:/var/roundcube/db
-      - ./roundcube-docker.conf.php:/var/www/html/config/config.docker.inc.php:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mail.rule=Host(`mail.${MAIL_DOMAIN}`)"
