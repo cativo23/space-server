@@ -69,6 +69,10 @@ services:
       - ROUNDCUBEMAIL_SMTP_PORT=587
       - ROUNDCUBEMAIL_SKIN=elastic
       - ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,managesieve
+      # Disable TLS for internal connections
+      - ROUNDCUBEMAIL_DEFAULT_IMAP_TLS=
+      - ROUNDCUBEMAIL_DEFAULT_SMTP_TLS=
+      - ROUNDCUBEMAIL_SMTP_USER=
     networks:
       - web
     volumes:
