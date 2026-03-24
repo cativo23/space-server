@@ -68,8 +68,9 @@ services:
       - ROUNDCUBEMAIL_SMTP_PORT=587
       - ROUNDCUBEMAIL_SKIN=elastic
       - ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,managesieve
-      - ROUNDCUBEMAIL_DEFAULT_IMAP_TLS=required
-      - ROUNDCUBEMAIL_DEFAULT_SMTP_TLS=required
+      # No TLS internally - all traffic stays on private Docker network
+      - ROUNDCUBEMAIL_DEFAULT_IMAP_TLS=
+      - ROUNDCUBEMAIL_DEFAULT_SMTP_TLS=
     networks:
       - web
     volumes:
