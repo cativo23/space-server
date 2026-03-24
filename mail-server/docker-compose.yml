@@ -61,6 +61,14 @@ services:
   webmail:
     image: roundcube/roundcubemail:latest
     container_name: webmail
+    environment:
+      # Plain IMAP/SMTP - Traefik handles SSL for web
+      - ROUNDCUBEMAIL_DEFAULT_HOST=mail
+      - ROUNDCUBEMAIL_DEFAULT_PORT=143
+      - ROUNDCUBEMAIL_SMTP_SERVER=mail
+      - ROUNDCUBEMAIL_SMTP_PORT=587
+      - ROUNDCUBEMAIL_SKIN=elastic
+      - ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,managesieve
     entrypoint: /bin/sh -c
     command:
       - |
