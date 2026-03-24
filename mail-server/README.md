@@ -1,37 +1,23 @@
-# Docker Mail Server
+# Mail Server
 
-Simple, production-ready mail server using docker-mailserver with Traefik integration.
+Docker mail server with Traefik integration for cativo.dev.
 
-## Quick Start
+## Services
 
-```bash
-# 1. Copy environment file
-cp .env.example .env
+| Service | URL | Description |
+|---------|-----|-------------|
+| Webmail | `https://mail.cativo.dev` | Roundcube webmail |
 
-# 2. Edit with your domain and passwords
-nano .env
+## Email Accounts
 
-# 3. Start the server
-docker compose up -d
-
-# 4. Check status
-docker compose ps
-```
-
-## Access
-
-| Service | URL |
-|---------|-----|
-| Webmail | `https://mail.cativo.dev` |
-
-## Default Account
-
-Set in `.env` as `MAIL_ACCOUNTS`:
-```
-email@domain.com|password|5000:5000
-```
+| Email | Password |
+|-------|----------|
+| admin@cativo.dev | `Qx9#mKp2$vL7nR4w` |
+| test@cativo.dev | `TestPass123!` |
 
 ## DNS Records
+
+Add these to your domain's DNS:
 
 ```
 ; MX Record
@@ -46,41 +32,34 @@ mail        IN  A       <server-ip>
 ; SPF
 @           IN  TXT     "v=spf1 mx a ip4:<server-ip> -all"
 
-; DKIM (generate after first run)
-; Run: docker exec mail docker-mailserver config dkim domain cativo.dev
-; Copy the DNS record output
-
-; DMARC
+; DMARC (optional)
 _dmarc      IN  TXT     "v=DMARC1; p=quarantine; rua=mailto:postmaster@cativo.dev"
+```
+
+## Quick Start
+
+```bash
+cd ~/space-server/mail-server
+docker compose up -d
 ```
 
 ## Common Commands
 
 ```bash
-# View logs
-docker compose logs -f mail
-
 # Add email account
-docker exec mail docker-mailserver config account add user@cativo.dev password123
+docker exec mail addmailuser user@cativo.dev 'password'
 
 # List accounts
 docker exec mail docker-mailserver config account list
 
-# Update password
-docker exec mail docker-mailserver config account passwd user@cativo.dev newpassword
+# Delete account
+docker exec mail delmailuser user@cativo.dev
 
-# Generate DKIM keys
-docker exec mail docker-mailserver config dkim domain cativo.dev
+# View logs
+docker compose logs -f mail
 
-# View mail queue
-docker exec mail mailq
-
-# Delete from queue
-docker exec mail postsuper -d ALL
-
-# Backup
-docker compose exec mail tar czf /tmp/backup.tar.gz /var/mail /var/mail-state
-docker compose cp mail:/tmp/backup.tar.gz ./backup.tar.gz
+# Restart
+docker compose restart
 ```
 
 ## Ports
@@ -88,40 +67,13 @@ docker compose cp mail:/tmp/backup.tar.gz ./backup.tar.gz
 | Port | Service |
 |------|---------|
 | 25   | SMTP (incoming) |
-| 465  | SMTPS (secure submission) |
-| 587  | Submission (STARTTLS) |
+| 465  | SMTPS |
+| 587  | Submission |
 | 993  | IMAPS |
-| 995  | POP3S (optional) |
+| 995  | POP3S |
 
-## Features
+## Notes
 
-- Postfix (MTA)
-- Dovecot (IMAP/POP3)
-- SpamAssassin (spam filtering)
-- ClamAV (antivirus)
-- Fail2Ban (intrusion prevention)
-- Roundcube (webmail)
-- ManageSieve (mail filters)
-- Let's Encrypt SSL (via Traefik)
-
-## Troubleshooting
-
-```bash
-# Check if ports are listening
-docker exec mail ss -tlnp
-
-# Test SMTP connection
-telnet localhost 25
-
-# Test secure connection
-openssl s_client -connect localhost:465
-
-# View specific logs
-docker compose logs -f mail | grep -i error
-```
-
-## Resources
-
-- [docker-mailserver docs](https://docker-mailserver.github.io/docker-mailserver/)
-- [GitHub](https://github.com/docker-mailserver/docker-mailserver)
-- [Roundcube docs](https://roundcube.net/about/)
+- SSL is self-signed (Traefik handles public HTTPS for webmail)
+- ClamAV disabled to reduce resource usage
+- SpamAssassin enabled
