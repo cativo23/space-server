@@ -9,3 +9,6 @@ grafana-data/
 
 # Blog posts
 blog/
+
+# Mailcow configuration
+mailcow/.env
