@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   mail:
     image: ghcr.io/docker-mailserver/docker-mailserver:latest
@@ -19,11 +17,6 @@ services:
       - mail-logs:/var/log/mail
       - mail-config:/tmp/docker-mailserver
       - /etc/localtime:/etc/localtime:ro
-      - mail-data:/var/mail
-      - mail-state:/var/mail-state
-      - mail-logs:/var/log/mail
-      - mail-config:/tmp/docker-mailserver
-      - /etc/localtime:/etc/localtime:ro
     environment:
       # Hostname & Domain
       - OVERRIDES_HOSTNAME=${MAIL_HOSTNAME:-mail}.${MAIL_DOMAIN}
@@ -32,7 +25,7 @@ services:
       # Accounts (format: user|password|uid:gid)
       - OVERRIDES_ACCOUNTS=${MAIL_ACCOUNTS}
 
-      # Security - Let mailserver generate self-signed cert (Traefik handles public TLS)
+      # Security
       - PERMIT_DOCKER=network
       - ENABLE_FAIL2BAN=1
       - FAIL2BAN_BLOCKTYPE=drop
@@ -50,9 +43,6 @@ services:
 
       # Logging
       - LOG_LEVEL=info
-
-      # Traefik network (for webmail access)
-      - NETWORK_TRAEFIK=web
     networks:
       - web
     cap_add:
@@ -60,21 +50,21 @@ services:
       - SYS_PTRACE
     restart: always
     healthcheck:
-      test: ["CMD", "ss", "--all", "--listen", "|", "grep", "-E", ":(25|465|587|993)"]
+      test: ["CMD-SHELL", "ss -tlnp | grep -qE ':(25|465|587|993)'"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
 
-  # Optional: Roundcube Webmail
+  # Roundcube Webmail
   webmail:
     image: roundcube/roundcubemail:latest
     container_name: webmail
     environment:
-      - ROUNDCUBEMAIL_DEFAULT_HOST=ssl://mail
-      - ROUNDCUBEMAIL_DEFAULT_PORT=993
-      - ROUNDCUBEMAIL_SMTP_SERVER=ssl://mail
-      - ROUNDCUBEMAIL_SMTP_PORT=465
+      - ROUNDCUBEMAIL_DEFAULT_HOST=mail
+      - ROUNDCUBEMAIL_DEFAULT_PORT=143
+      - ROUNDCUBEMAIL_SMTP_SERVER=mail
+      - ROUNDCUBEMAIL_SMTP_PORT=587
       - ROUNDCUBEMAIL_SKIN=elastic
       - ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,managesieve
     networks:
