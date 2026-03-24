@@ -32,8 +32,7 @@ services:
       # Accounts (format: user|password|uid:gid)
       - OVERRIDES_ACCOUNTS=${MAIL_ACCOUNTS}
 
-      # Security - Generate self-signed cert (Traefik handles public TLS)
-      - SSL_TYPE=notest
+      # Security - Let mailserver generate self-signed cert (Traefik handles public TLS)
       - PERMIT_DOCKER=network
       - ENABLE_FAIL2BAN=1
       - FAIL2BAN_BLOCKTYPE=drop
