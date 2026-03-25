@@ -69,22 +69,11 @@ services:
       - ROUNDCUBEMAIL_SMTP_PORT=587
       - ROUNDCUBEMAIL_SKIN=elastic
       - ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,managesieve
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        echo '<?php
-        $config["plugins"] = [];
-        $config["imap_host"] = "mail:143";
-        $config["smtp_host"] = "mail:587";
-        $config["smtp_port"] = 587;
-        $config["db_dsnw"] = "sqlite:////var/roundcube/db/db.sqlite";
-        $config["skin"] = "elastic";
-        ' > /var/www/html/config/config.docker.inc.php &&
-        exec apache2-foreground
     networks:
       - web
     volumes:
       - webmail-data:/var/roundcube/db
+      - ./roundcube-config.inc.php:/var/roundcube/config/config.inc.php:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mail.rule=Host(`mail.${MAIL_DOMAIN}`)"
