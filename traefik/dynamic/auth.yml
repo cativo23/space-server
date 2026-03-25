@@ -12,3 +12,14 @@ http:
         frameDeny: true
         contentTypeNosniff: true
         browserXssFilter: true
+    # Security headers for webmail (allows iframes for Roundcube)
+    mail-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        forceSTSHeader: true
+        frameDeny: false
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-src 'self';"
