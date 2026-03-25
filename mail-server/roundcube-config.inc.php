@@ -7,5 +7,6 @@ $config['smtp_host'] = 'mail:587';
 $config['smtp_port'] = 587;
 $config['smtp_user'] = '%u';
 $config['smtp_pass'] = '%p';
+$config['smtp_auth_type'] = 'PLAIN';
 $config['db_dsnw'] = 'sqlite:////var/roundcube/db/db.sqlite';
 $config['skin'] = 'elastic';
