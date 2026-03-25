@@ -7,3 +7,17 @@ $config['smtp_host'] = 'mail:587';
 $config['smtp_port'] = 587;
 $config['db_dsnw'] = 'sqlite:////var/roundcube/db/db.sqlite';
 $config['skin'] = 'elastic';
+
+// IMAP connection options
+$config['imap_conn_options'] = [
+    'ssl' => null,
+];
+$config['smtp_conn_options'] = [
+    'ssl' => null,
+];
+
+// Session and password handling
+$config['password_store'] = 'session';
+$config['enable_caching'] = false;
+$config['ip_check'] = false;
+$config['referer_check'] = false;
