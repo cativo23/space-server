@@ -74,6 +74,7 @@ services:
       - /bin/sh
       - -c
       - |
+        mkdir -p /var/www/html/config &&
         echo '<?php
         $config["plugins"] = [];
         $config["imap_host"] = "mail:143";
