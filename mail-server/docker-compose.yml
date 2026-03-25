@@ -69,7 +69,7 @@ services:
       - ROUNDCUBEMAIL_SMTP_PORT=587
       - ROUNDCUBEMAIL_SKIN=elastic
       - ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,managesieve
-    entrypoint: /bin/sh -c
+    entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         echo '<?php
@@ -79,8 +79,8 @@ services:
         $config["smtp_port"] = 587;
         $config["db_dsnw"] = "sqlite:////var/roundcube/db/db.sqlite";
         $config["skin"] = "elastic";
-        ' > /var/www/html/config/config.docker.inc.php
-        exec /docker-entrypoint.sh apache2-foreground
+        ' > /var/www/html/config/config.docker.inc.php &&
+        exec apache2-foreground
     networks:
       - web
     volumes:
