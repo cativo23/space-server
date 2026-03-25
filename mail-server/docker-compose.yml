@@ -74,6 +74,7 @@ services:
     volumes:
       - webmail-data:/var/roundcube/db
       - ./roundcube-config.inc.php:/var/roundcube/config/config.inc.php:ro
+    user: "www-data:www-data"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mail.rule=Host(`mail.${MAIL_DOMAIN}`)"
