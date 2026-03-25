@@ -76,15 +76,15 @@ services:
       - |
         mkdir -p /var/www/html/config &&
         echo '<?php
-        $config["plugins"] = [];
-        $config["imap_host"] = "mail:143";
-        $config["smtp_host"] = "mail:587";
-        $config["smtp_port"] = 587;
-        $config["smtp_user"] = "%u";
-        $config["smtp_pass"] = "%p";
-        $config["smtp_auth_type"] = "PLAIN";
-        $config["db_dsnw"] = "sqlite:////var/roundcube/db/db.sqlite";
-        $config["skin"] = "elastic";
+        $$config["plugins"] = [];
+        $$config["imap_host"] = "mail:143";
+        $$config["smtp_host"] = "mail:587";
+        $$config["smtp_port"] = 587;
+        $$config["smtp_user"] = "%u";
+        $$config["smtp_pass"] = "%p";
+        $$config["smtp_auth_type"] = "PLAIN";
+        $$config["db_dsnw"] = "sqlite:////var/roundcube/db/db.sqlite";
+        $$config["skin"] = "elastic";
         ' > /var/www/html/config/config.inc.php &&
         exec /docker-entrypoint.sh apache2-foreground
     labels:
