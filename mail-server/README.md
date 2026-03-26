@@ -8,34 +8,6 @@ Docker mail server with Traefik integration for cativo.dev.
 |---------|-----|-------------|
 | Webmail | `https://mail.cativo.dev` | Roundcube webmail |
 
-## Email Accounts
-
-| Email | Password |
-|-------|----------|
-| admin@cativo.dev | `Qx9#mKp2$vL7nR4w` |
-| test@cativo.dev | `TestPass123!` |
-
-## DNS Records
-
-Add these to your domain's DNS:
-
-```
-; MX Record
-@           IN  MX      10 mail.cativo.dev.
-
-; A Record
-mail        IN  A       <server-ip>
-
-; PTR Record (with VPS provider)
-<ip>        IN  PTR     mail.cativo.dev.
-
-; SPF
-@           IN  TXT     "v=spf1 mx a ip4:<server-ip> -all"
-
-; DMARC (optional)
-_dmarc      IN  TXT     "v=DMARC1; p=quarantine; rua=mailto:postmaster@cativo.dev"
-```
-
 ## Quick Start
 
 ```bash
