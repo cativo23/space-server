@@ -1,1 +1,5 @@
-admin@cativo.dev|{SHA512-CRYPT}$6$8oyb0GmgVzzNw1c6$tcEpiqcWB3Q9TQ2tiTaLI1G.IR5.GTY6P8OFdpdG5eq0wskrKufU8pvX/fzf3.FIfLnVLOsPhBI4XtdoTOV771
+# Dovecot accounts configuration
+# This file is auto-generated from MAIL_ACCOUNTS environment variable
+#
+# To add accounts manually, use:
+#   docker exec mail setup email add user@domain password

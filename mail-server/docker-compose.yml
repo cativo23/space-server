@@ -19,6 +19,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ./docker-mailserver/accounts/postfix-accounts.cf:/tmp/docker-mailserver/postfix-accounts.cf:ro
       - ./docker-mailserver/accounts/dovecot-accounts.cf:/tmp/docker-mailserver/dovecot-accounts.cf:ro
+      - ${TRAEFIK_ACME_PATH:-/home/cativo23/space-server/traefik/letsencrypt/acme.json}:/etc/letsencrypt/acme.json:ro
     environment:
       # Hostname & Domain
       - OVERRIDES_HOSTNAME=${MAIL_HOSTNAME:-mail}.${MAIL_DOMAIN}
@@ -27,6 +28,9 @@ services:
       # Security
       - ONE_DIR=1
       - PERMIT_DOCKER=network
+
+      # SSL/TLS configuration for Traefik
+      - SSL_TYPE=letsencrypt
 
       # Spam protection
       - ENABLE_SPAMASSASSIN=1
@@ -40,6 +44,9 @@ services:
 
       # Logging
       - LOG_LEVEL=info
+
+      # Email accounts (auto-generates postfix-accounts.cf on first start)
+      - MAIL_ACCOUNTS=${MAIL_ACCOUNTS}
     networks:
       - web
     cap_add:
@@ -69,7 +76,6 @@ services:
       - web
     volumes:
       - webmail-data:/var/roundcube/db
-    user: "www-data:www-data"
     entrypoint:
       - /bin/sh
       - -c
@@ -87,6 +93,10 @@ services:
         $$config["smtp_tls_wrapper"] = false;
         $$config["db_dsnw"] = "sqlite:////var/roundcube/db/db.sqlite";
         $$config["skin"] = "elastic";
+        $$config["imap_conn_options"]["ssl"]["verify_peer"] = false;
+        $$config["imap_conn_options"]["ssl"]["verify_peer_name"] = false;
+        $$config["smtp_conn_options"]["ssl"]["verify_peer"] = false;
+        $$config["smtp_conn_options"]["ssl"]["verify_peer_name"] = false;
         ' > /var/www/html/config/config.inc.php &&
         exec /docker-entrypoint.sh apache2-foreground
     labels:

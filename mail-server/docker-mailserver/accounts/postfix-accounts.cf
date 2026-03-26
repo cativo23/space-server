@@ -1,1 +1,9 @@
-admin@cativo.dev|{SHA512-CRYPT}$6$8oyb0GmgVzzNw1c6$tcEpiqcWB3Q9TQ2tiTaLI1G.IR5.GTY6P8OFdpdG5eq0wskrKufU8pvX/fzf3.FIfLnVLOsPhBI4XtdoTOV771
+# Postfix accounts configuration
+# This file is auto-generated from MAIL_ACCOUNTS environment variable
+# Format: user@domain|{password_hash}|uid:gid
+#
+# To add accounts manually, use:
+#   docker exec mail setup email add user@domain password
+#
+# Or add to .env (multiple accounts separated by ;):
+#   MAIL_ACCOUNTS=user1@domain.com|pass1|5000:5000;user2@domain.com|pass2|5000:5000
