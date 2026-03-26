@@ -475,6 +475,112 @@ El servidor está en producción y funcionando correctamente:
 - Implementar monitoring con Prometheus
 - Añadir soporte para aliases y dominios virtuales múltiples
 
+## Apéndice: Diario Real de la Sesión de Claude Code
+
+Esto es lo que **realmente** pasó durante la sesión de configuración (extractos del log):
+
+### El momento de frustración
+
+```
+USER: SMTP Error (554): Failed to add recipient "cativo23.kt@gmail.com"
+(5.7.1 <webmail.web[172.20.0.3]>: Client host rejected: Access denied).
+
+USER: same error this is frustating
+```
+
+**Causa:** El contenedor webmail estaba en una red Docker diferente y Postfix lo rechazó.
+
+**Solución:** Ambos contenedores deben estar en la misma red `web` externa.
+
+### El problema de X-Frame-Options
+
+```
+USER: Refused to display 'https://mail.cativo.dev/' in a frame because
+it set 'X-Frame-Options' to 'deny'.
+```
+
+**Causa:** El middleware `security-headers@file` de Traefik tenía `frameDeny: true`.
+
+**Solución:** Crear middleware específico `mail-headers@file` con `frameDeny: false`.
+
+### El problema de CSP
+
+```
+USER: Loading the stylesheet 'https://mail.cativo.dev/skins/elastic/deps/bootstrap.min.css'
+violates the following Content Security Policy directive: "style-src self unsafe-inline"
+```
+
+**Causa:** ContentSecurityPolicy demasiado restrictivo.
+
+**Solución:** Relajar CSP para Roundcube:
+```yaml
+contentSecurityPolicy: "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; frame-ancestors *;"
+```
+
+### La saga del entrypoint de Roundcube
+
+Después de múltiples intentos fallidos:
+
+```yaml
+# Intento 1: Variables de entorno (no funcionó)
+environment:
+  - ROUNDCUBEMAIL_DEFAULT_HOST=mail
+
+# Intento 2: Archivo de config montado (sobrescrito por entrypoint)
+volumes:
+  - ./roundcube-config.inc.php:/var/roundcube/config/config.inc.php:ro
+
+# Intento 3: Entrypoint personalizado (funcionó!)
+entrypoint:
+  - /bin/sh
+  - -c
+  - |
+    mkdir -p /var/www/html/config &&
+    echo '<?php ... ?>' > /var/www/html/config/config.inc.php &&
+    exec /docker-entrypoint.sh apache2-foreground
+```
+
+### El momento de éxito
+
+```
+LINE 2680: USER - Mensaje original
+ID de mensaje    <b78619ccb0f7b87e914f9591ac2a25f8@cativo.dev>
+Creado a las:    24 de marzo de 2026 a las 21:00 (entregado en 6 segundos)
+De:    admin@cativo.dev
+Para:    Carlos Cativo <cativo23.kt@gmail.com>
+Asunto:    Prueba
+SPF:    PASS con la IP 186.32.90.71
+DMARC:    'PASS'
+
+LINE 3057: USER - Mensaje original
+ID de mensaje    <a7d6683d551cd62c23c860bf184adc8d@cativo.dev>
+SPF:    PASS
+DKIM:    'PASS' con el dominio cativo.dev
+DMARC:    'PASS'
+```
+
+**Estado final:** ✅ Todos los servicios operativos
+- Webmail: https://mail.cativo.dev (HTTP 200)
+- SPF, DKIM, DMARC: PASS
+- SMTP: Puertos 25, 587 escuchando
+- IMAP: Puertos 143, 993 escuchando
+
+### La conversación de "Message was not encrypted"
+
+```
+USER: "Message was not encrypted" me salio en gmail
+```
+
+**Explicación:** El correo se envió sin cifrado TLS entre servidores SMTP. Esto es normal:
+- Gmail → tu servidor: cifrado (TLS)
+- Tu servidor → Gmail: depende de la política de Gmail
+
+Para forzar TLS saliente se necesita configuración adicional en Postfix, pero no es crítico para funcionamiento básico.
+
+---
+
+**Nota del autor:** Este blog se escribió analizando **más de 4000 líneas de logs de sesiones de Claude Code** y **37 commits** en el repositorio. Cada error, cada solución, está documentada con evidencia real de lo que funcionó y lo que no.
+
 ## Conclusión
 
 Auto-hostear email es más accesible de lo que parece, pero requiere paciencia. Los 30+ commits de este proyecto demuestran que incluso con herramientas bien documentadas como docker-mailserver, hay detalles que solo se descubren probando.
