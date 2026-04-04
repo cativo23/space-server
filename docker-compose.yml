@@ -10,6 +10,10 @@ services:
       - SERVICES=1
       - SWARM=1
       - TASKS=1
+      - INFO=1
+      - EVENTS=1
+      - VERSION=1
+      - PING=1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -73,6 +77,23 @@ services:
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
     networks:
       - web
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    environment:
+      - DOCKER_HOST=tcp://dockerproxy:2375
+      - DOZZLE_NO_ANALYTICS=1
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dozzle.rule=Host(`dozzle.cativo.dev`)"
+      - "traefik.http.routers.dozzle.entrypoints=websecure"
+      - "traefik.http.routers.dozzle.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.dozzle.middlewares=security-headers@file"
+      - "traefik.http.services.dozzle.loadbalancer.server.port=8080"
+    networks:
+      - web
+
   grafana:
     image: grafana/grafana
     container_name: grafana
