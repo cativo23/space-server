@@ -1,117 +1,117 @@
 # Space Server
 
-> Mi infraestructura personal completamente self-hosteada. De una laptop vieja a un VPS en producción.
+> My completely self-hosted personal infrastructure. From an old laptop to a production VPS.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-ready-blue?logo=docker)](https://www.docker.com/)
 
-## Por qué existe esto
+## Why this exists
 
-Estaba cansado de depender de servicios de terceros para cosas básicas como email y hosting. Quería control total sobre mis datos y aprender cómo funciona realmente la infraestructura web moderna. Así que convertí una laptop vieja en un servidor casero y eventualmente lo migré a un VPS cuando el hardware ya no daba más.
+I was tired of depending on third-party services for basic things like email and hosting. I wanted full control over my data and to learn how modern web infrastructure actually works. So I turned an old laptop into a home server and eventually migrated it to a VPS when the hardware couldn't keep up anymore.
 
-Este repo documenta todo el proceso - los 30+ commits debuggeando el mail server, la migración completa con scripts automatizados, y las lecciones aprendidas en el camino.
+This repo documents the entire process - the 30+ commits debugging the mail server, the complete migration with automated scripts, and the lessons learned along the way.
 
-## Qué corre aquí
+## What runs here
 
-**Producción actual:** Hetzner VPS (8GB RAM, Intel Xeon, Ubuntu 24.04)
+**Current production:** Hetzner VPS (8GB RAM, Intel Xeon, Ubuntu 24.04)
 
 ```
-15+ servicios containerizados:
-├── Mail server completo (docker-mailserver + Roundcube)
-├── Blog técnico (Ghost + MySQL)
-├── Portfolio personal (React + Laravel API)
+15+ containerized services:
+├── Complete mail server (docker-mailserver + Roundcube)
+├── Technical blog (Ghost + MySQL)
+├── Personal portfolio (React + Laravel API)
 ├── Monitoring (Grafana + Prometheus + Uptime Kuma)
-├── Logs centralizados (Dozzle)
-└── Traefik manejando SSL automático para todo
+├── Centralized logs (Dozzle)
+└── Traefik handling automatic SSL for everything
 ```
 
-**Migración:** 12 minutos de downtime total para mover todo desde la laptop. Ver [el blog post](blog/migracion-servidor-completa.md) para el proceso completo con scripts.
+**Migration:** 12 minutes of total downtime to move everything from the laptop. See [the blog post](blog/migracion-servidor-completa.md) for the complete process with scripts.
 
-## Stack técnico
+## Tech stack
 
-No voy a listar cada contenedor aquí - el punto es que todo está dockerizado y orquestado con docker-compose. Si quieres ver exactamente qué imágenes uso, revisa los `docker-compose.yml` en cada directorio.
+I'm not going to list every container here - the point is that everything is dockerized and orchestrated with docker-compose. If you want to see exactly what images I use, check the `docker-compose.yml` files in each directory.
 
-**Lo importante:**
-- **Traefik v3.6** - Reverse proxy que maneja SSL automático con Let's Encrypt
-- **docker-mailserver** - SMTP/IMAP con SPF, DKIM, DMARC configurados
-- **Ghost 5** - Blog donde documento todo esto
-- **Grafana + Prometheus** - Para saber cuándo algo se rompe antes de que me entere por Twitter
+**What matters:**
+- **Traefik v3.6** - Reverse proxy that handles automatic SSL with Let's Encrypt
+- **docker-mailserver** - SMTP/IMAP with SPF, DKIM, DMARC configured
+- **Ghost 5** - Blog where I document all of this
+- **Grafana + Prometheus** - To know when something breaks before I find out on Twitter
 
-## Empezar rápido
+## Quick start
 
 ```bash
-# Clonar
+# Clone
 git clone https://github.com/cativo23/space-server.git
 cd space-server
 
-# Configurar
+# Configure
 cp .env.example .env
-# Editar .env con tu dominio y credenciales
+# Edit .env with your domain and credentials
 
-# Levantar servicios
+# Start services
 docker compose up -d
 ```
 
-**Nota importante:** Si vas a usar el mail server, necesitas configurar DNS correctamente (registros MX, SPF, DKIM). Ver [la guía del mail server](blog/self-hosted-email-server.md) que documenta los 30+ commits que me tomó hacerlo funcionar.
+**Important note:** If you're going to use the mail server, you need to configure DNS correctly (MX, SPF, DKIM records). See [the mail server guide](blog/self-hosted-email-server.md) that documents the 30+ commits it took me to get it working.
 
-## Documentación real
+## Real documentation
 
-Escribí blog posts técnicos sobre el proceso porque la documentación genérica no me sirvió cuando lo estaba haciendo:
+I wrote technical blog posts about the process because generic documentation didn't help me when I was doing this:
 
-- **[Configurando un Servidor de Correo Self-Hosted](blog/self-hosted-email-server.md)** - Setup completo del mail server. Incluye todos los errores que encontré y cómo los resolví.
+- **[Setting Up a Self-Hosted Email Server](blog/self-hosted-email-server.md)** - Complete mail server setup. Includes all the errors I found and how I fixed them.
 
-- **[Migración Completa: De Laptop a VPS](blog/migracion-servidor-completa.md)** - Cómo migré 15+ servicios con scripts automatizados. 12 minutos de downtime, cero pérdida de datos.
+- **[Complete Migration: From Laptop to VPS](blog/migracion-servidor-completa.md)** - How I migrated 15+ services with automated scripts. 12 minutes of downtime, zero data loss.
 
-- **[Debugging Gateway Timeout en Webmail](blog/debugging-webmail-gateway-timeout.md)** - Deep-dive técnico del debugging post-migración. Network mismatch y permisos.
+- **[Debugging Gateway Timeout in Webmail](blog/debugging-webmail-gateway-timeout.md)** - Technical deep-dive of post-migration debugging. Network mismatch and permissions.
 
-## Cosas que aprendí
+## Things I learned
 
-**Lo que funcionó:**
-- Scripts de migración automatizados valen completamente la pena
-- Traefik hace que SSL sea trivial
-- Docker Compose es suficiente para esto, no necesitas Kubernetes
+**What worked:**
+- Automated migration scripts are completely worth it
+- Traefik makes SSL trivial
+- Docker Compose is enough for this, you don't need Kubernetes
 
-**Lo que no funcionó:**
-- Hetzner bloquea el puerto 25 saliente (no puedo enviar emails directamente)
-- Los volúmenes Docker migrados pueden tener permisos incorrectos
-- Las redes Docker no son portables entre hosts
+**What didn't work:**
+- Hetzner blocks outbound port 25 (I can't send emails directly)
+- Migrated Docker volumes can have incorrect permissions
+- Docker networks aren't portable between hosts
 
-**Próximos pasos:**
-- Migrar a Ansible para hacer esto más reproducible
-- Eventualmente comprar un servidor físico dedicado
-- Configurar un relay SMTP para poder enviar emails
+**Next steps:**
+- Migrate to Ansible to make this more reproducible
+- Eventually buy a dedicated physical server
+- Set up an SMTP relay to be able to send emails
 
-## Estructura del repo
+## Repo structure
 
 ```
 space-server/
-├── docker-compose.yml          # Stack principal
-├── mail-server/                # Configuración del mail server
+├── docker-compose.yml          # Main stack
+├── mail-server/                # Mail server configuration
 │   ├── docker-compose.yml
-│   └── docker-mailserver/      # Configs de Postfix/Dovecot
+│   └── docker-mailserver/      # Postfix/Dovecot configs
 ├── traefik/                    # Reverse proxy + SSL
-├── scripts/                    # Scripts de migración
+├── scripts/                    # Migration scripts
 │   ├── 1-backup-cativo.sh
 │   ├── 2-download-backup.sh
 │   └── ...
-└── blog/                       # Posts técnicos (no commiteados)
+└── blog/                       # Technical posts (not committed)
 ```
 
-## Requisitos
+## Requirements
 
-- VPS con al menos 4GB RAM (8GB recomendado)
-- Dominio con acceso a DNS
+- VPS with at least 4GB RAM (8GB recommended)
+- Domain with DNS access
 - Docker + Docker Compose v2
-- Puerto 25 abierto si quieres enviar emails (muchos VPS lo bloquean)
+- Port 25 open if you want to send emails (many VPS providers block it)
 
-## Contribuir
+## Contributing
 
-Este es principalmente un proyecto personal, pero si encuentras algo útil o quieres sugerir mejoras, los PRs son bienvenidos. Ver [CONTRIBUTING.md](CONTRIBUTING.md).
+This is mainly a personal project, but if you find something useful or want to suggest improvements, PRs are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT - Haz lo que quieras con esto. Si te sirve, genial.
+MIT - Do whatever you want with this. If it helps you, great.
 
 ---
 
-**¿Preguntas?** Abre un issue o revisa los blog posts - probablemente ya documenté el problema que estás teniendo.
+**Questions?** Open an issue or check the blog posts - I probably already documented the problem you're having.
