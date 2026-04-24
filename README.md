@@ -15,17 +15,28 @@
 [![Docker](https://img.shields.io/badge/Docker-ready-blue?logo=docker)](https://www.docker.com/)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-100%25-orange)](.)
 
-**Infraestructura personal auto-hosteada**
+**Infraestructura personal auto-hosteada con 15+ servicios en producción**
+
+[Features](#-features) • [Tech Stack](#-tech-stack) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Blog Posts](#-blog-posts)
 
 </div>
 
 ---
 
-## Overview
+## 📖 Overview
 
-Space Server es una colección de servicios self-hosteados que reemplazan dependencias de Big Tech con alternativas bajo tu control total. Nace de la necesidad de soberanía digital: tus correos, tu contenido y tus datos en tu infraestructura.
+Space Server es mi infraestructura personal completamente self-hosteada que reemplaza dependencias de Big Tech con alternativas bajo control total. Nace de la necesidad de soberanía digital: tus correos, tu contenido y tus datos en tu infraestructura.
 
-Actualmente incluye servidor de correo completo con webmail y blog técnico, con más servicios en desarrollo.
+**Actualmente en producción:**
+- 🖥️ VPS Hetzner (8GB RAM, Intel Xeon, Ubuntu 24.04)
+- 🐳 15+ servicios containerizados con Docker
+- 🔒 SSL automático con Let's Encrypt
+- 📊 Monitoring completo con Grafana + Prometheus
+- ✉️ Mail server completo con webmail
+- 📝 Blog técnico con Ghost
+- 🎨 Portfolio personal con API Laravel
+
+**Migrado exitosamente desde una laptop vieja** con 12 minutos de downtime total. Ver [blog de migración](blog/migracion-servidor-completa.md) para el proceso completo.
 
 ---
 
@@ -35,19 +46,58 @@ Actualmente incluye servidor de correo completo con webmail y blog técnico, con
 - **SSL Automático** — Certificados Let's Encrypt gestionados por Traefik
 - **Webmail Roundcube** — Interfaz web con filtros Sieve y gestión de contactos
 - **Anti-Spam Integrado** — SpamAssassin con ~90% de efectividad
-- **Blog Técnico** — Contenido sobre self-hosting y desarrollo
-- **Docker Native** — Todo contenerizado, desplegable en cualquier VPS
+- **Blog & Portfolio** — Ghost blog + Portfolio personal con API Laravel
+- **Monitoring Stack** — Grafana + Prometheus + Uptime Kuma para observabilidad completa
+- **Logs Centralizados** — Dozzle para visualización de logs en tiempo real
+- **Docker Native** — 15+ servicios contenerizados, desplegables en cualquier VPS
 
 ---
 
 ## 🛠 Tech Stack
 
-| Componente | Versión | Propósito |
-|------------|---------|-----------|
-| Docker Mail Server | latest | SMTP/IMAP con OpenDKIM + SpamAssassin |
-| Roundcube | latest | Webmail moderno |
-| Traefik | latest | Reverse proxy con SSL automático |
-| Docker Compose | v2+ | Orquestación de servicios |
+### Core Infrastructure
+| Container | Image | Purpose |
+|-----------|-------|---------|
+| traefik | `traefik:v3.6` | Reverse proxy con SSL automático |
+| dockerproxy | `tecnativa/docker-socket-proxy:latest` | Docker socket proxy para seguridad |
+
+### Applications
+| Container | Image | Purpose |
+|-----------|-------|---------|
+| ghost-blog-prod-ghost-1 | `ghost:5-alpine` | Blog técnico |
+| ghost-blog-prod-db-1 | `mysql:5.7` | Base de datos Ghost |
+| portfolio-prod-app-1 | `cativo23/portfolio:latest` | Portfolio frontend (React) |
+| portfolio-api-deploy-api-1 | `cativo23/portfolio-api:latest` | Portfolio API (Laravel) |
+| portfolio-api-deploy-mysql-1 | `mariadb:10.11` | Base de datos Portfolio |
+| portfolio-api-deploy-redis-1 | `redis:7-alpine` | Cache Redis |
+| hello-kitty-landing-app-1 | `cativo23/hello-kitty-landing:latest` | Landing page |
+| whoami | `traefik/whoami` | Test service |
+
+### Mail Services
+| Container | Image | Purpose |
+|-----------|-------|---------|
+| mail | `ghcr.io/docker-mailserver/docker-mailserver:latest` | SMTP/IMAP server |
+| webmail | `roundcube/roundcubemail:latest` | Webmail interface |
+
+### Monitoring & Observability
+| Container | Image | Purpose |
+|-----------|-------|---------|
+| grafana | `grafana/grafana` | Dashboards y visualización |
+| prometheus | `prom/prometheus` | Métricas y alertas |
+| uptime-kuma | `louislam/uptime-kuma:2` | Monitoreo de uptime |
+| dozzle | `amir20/dozzle:latest` | Logs en tiempo real |
+
+---
+
+## 📝 Blog Posts
+
+Documentación técnica detallada del proceso de construcción y migración:
+
+| Post | Descripción | Fecha |
+|------|-------------|-------|
+| [Configurando un Servidor de Correo Self-Hosted](blog/self-hosted-email-server.md) | Setup completo del mail server con docker-mailserver + Roundcube. Incluye 30+ commits de debugging. | 2026-03-26 |
+| [Migración Completa de Servidor: De Laptop a VPS](blog/migracion-servidor-completa.md) | Proceso completo de migración con scripts automatizados. 15+ servicios, 12 minutos de downtime. | 2026-04-23 |
+| [Debugging Gateway Timeout en Webmail](blog/debugging-webmail-gateway-timeout.md) | Deep-dive técnico del debugging post-migración. Network mismatch y permisos. | 2026-04-23 |
 
 ---
 

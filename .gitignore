@@ -1,5 +1,7 @@
 # Secrets
 .env
+*.env
+!.env.example
 
 # Let's Encrypt certificates
 traefik/letsencrypt/acme.json
@@ -10,5 +12,23 @@ grafana-data/
 # Blog posts
 blog/
 
-# Mailcow configuration
-mailcow/.env
+# Docker volumes
+*-data/
+
+# Logs
+*.log
+logs/
+
+# Backups
+backups/
+*.tar.gz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
