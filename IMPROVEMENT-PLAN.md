@@ -23,7 +23,6 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 
 ## P1 — Resilience and observability
 
-- [ ] **F4. Automated backups.** `scripts/` are one-shot migration tools, no recurring backup. Pick `restic` (encrypted, dedup'd, easy) → Hetzner Storage Box (~€4/mo). Backup: mail-data, ghost volumes, grafana-data, uptime-kuma-data, portfolio-api MySQL/Redis, cliproxy postgres, traefik/letsencrypt. Daily cron + monthly restore test.
 - [ ] **F5. Alerting.** Prometheus only scrapes Traefik. Add: `node_exporter` (host), `cAdvisor` (containers), `blackbox_exporter` (external uptime), `Alertmanager`. Minimum 5 rules: disk >85%, cert <14d, container restart loop, host load >2, mail queue >50.
 - [ ] **F6. Log retention.** Dozzle is a viewer; logs vanish on container restart. Add Loki + Promtail (or `loki-docker-driver` plugin). Plug into existing Grafana.
 - [x] **F11. SMTP relay via Resend** (free tier, 3k/mo). Configured 2026-05-14. Domain `cativo.dev` verified at Resend (DKIM `resend._domainkey`, MX/SPF on `send.cativo.dev`, no impact on existing root SPF/DKIM). docker-mailserver `RELAY_*` env vars driven from gitignored `.env` on polaris2; outbound now routes through `smtp.resend.com:587` instead of trying direct port 25.
@@ -43,12 +42,17 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 - [ ] **F15.** Pin all image tags (no `:latest`). Add Renovate or Watchtower for managed updates.
 - [ ] **F16.** SOPS or `age` for encrypted secrets in git (enables real Ansible reproducibility without leaking `.env`).
 
+## Deferred — tackle last
+
+- [ ] **F4. Automated backups.** Deferred 2026-05-14 at Carlos' request — wants to land observability and hardening first. `scripts/` are one-shot migration tools, no recurring backup. When picked up: `restic` (encrypted, dedup'd) → Hetzner Storage Box (~€4/mo). Targets: mail-data, ghost volumes, grafana-data, uptime-kuma-data, portfolio-api MySQL/Redis, cliproxy postgres, traefik/letsencrypt. Daily cron + monthly restore test. **Caveat:** this is still the single biggest catastrophic-loss exposure; don't let it slip forever.
+
 ## Notes for future sessions
 
 - Carlos has stated: "Docker Compose is enough — no Kubernetes." Don't propose k8s.
-- Stated roadmap items already: Ansible reproducibility, dedicated physical server, SMTP relay.
-- Production host is `polaris2` (Hetzner, 8GB, Ubuntu 24.04). Live mail server — F2 needs prod verification.
+- Stated roadmap items already: Ansible reproducibility, dedicated physical server, SMTP relay (done — F11).
+- Production host is `polaris2` (Hetzner, 8GB, Ubuntu 24.04). Live mail server.
 - `.planning/` directory doesn't exist here; this repo isn't using the GSD workflow.
+- F4 (backups) was explicitly deferred to the end by Carlos. Do **not** propose it again as "next" — propose F5/F6/F3/F7 etc. instead.
 
 ## Open ADRs to write
 
