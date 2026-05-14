@@ -46,7 +46,10 @@ services:
       - LOG_LEVEL=info
 
       # SMTP relay for outbound mail (Hetzner blocks port 25 outbound).
-      # Values come from .env on the host; empty default means no relay.
+      # DEFAULT_RELAY_HOST sets postfix's `relayhost` (where mail goes);
+      # RELAY_HOST/PORT/USER/PASSWORD populate the matching sasl_passwd
+      # entry. All must agree on the host:port. Empty defaults = no relay.
+      - DEFAULT_RELAY_HOST=${DEFAULT_RELAY_HOST:-}
       - RELAY_HOST=${RELAY_HOST:-}
       - RELAY_PORT=${RELAY_PORT:-25}
       - RELAY_USER=${RELAY_USER:-}
