@@ -21,9 +21,9 @@ services:
       - ./docker-mailserver/accounts/dovecot-accounts.cf:/tmp/docker-mailserver/dovecot-accounts.cf:ro
       - ${TRAEFIK_ACME_PATH:-/home/cativo23/space-server/traefik/letsencrypt/acme.json}:/etc/letsencrypt/acme.json:ro
     environment:
-      # Hostname & Domain
-      - OVERRIDES_HOSTNAME=${MAIL_HOSTNAME:-mail}.${MAIL_DOMAIN}
-      - OVERRIDES_DOMAINNAME=${MAIL_DOMAIN}
+      # Hostname is set via the top-level `hostname:` + `domainname:` keys above.
+      # (Earlier versions of this file used OVERRIDES_HOSTNAME / OVERRIDES_DOMAINNAME,
+      # which are not real docker-mailserver variables and were silently ignored.)
 
       # Security
       - ONE_DIR=1
