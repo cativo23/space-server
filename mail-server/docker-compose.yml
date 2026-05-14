@@ -65,10 +65,13 @@ services:
     image: roundcube/roundcubemail:latest
     container_name: webmail
     environment:
-      # Plain IMAP/SMTP - Traefik handles SSL for web
-      - ROUNDCUBEMAIL_DEFAULT_HOST=mail
+      # IMAP over STARTTLS, SMTP submission over STARTTLS.
+      # docker-mailserver dovecot rejects plaintext LOGIN unless the client
+      # is already TLS-wrapped — the internal cert is self-signed, so verify
+      # is disabled below.
+      - ROUNDCUBEMAIL_DEFAULT_HOST=tls://mail
       - ROUNDCUBEMAIL_DEFAULT_PORT=143
-      - ROUNDCUBEMAIL_SMTP_SERVER=mail
+      - ROUNDCUBEMAIL_SMTP_SERVER=tls://mail
       - ROUNDCUBEMAIL_SMTP_PORT=587
       - ROUNDCUBEMAIL_SKIN=elastic
       - ROUNDCUBEMAIL_PLUGINS=archive,zipdownload,managesieve
@@ -83,8 +86,8 @@ services:
         mkdir -p /var/www/html/config &&
         echo '<?php
         $$config["plugins"] = [];
-        $$config["imap_host"] = "mail:143";
-        $$config["smtp_host"] = "mail:587";
+        $$config["imap_host"] = "tls://mail:143";
+        $$config["smtp_host"] = "tls://mail:587";
         $$config["smtp_port"] = 587;
         $$config["smtp_user"] = "%u";
         $$config["smtp_pass"] = "%p";
