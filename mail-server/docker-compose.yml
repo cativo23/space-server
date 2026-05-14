@@ -111,7 +111,12 @@ services:
     restart: always
 
 networks:
+  # The service-side reference stays `web` for backwards-compat with
+  # docker-mailserver's PERMIT_DOCKER=network logic, but the actual
+  # docker network is `space-server_web` (matches dozzle/, uptime-kuma/,
+  # ghost, portfolio — root compose's project-prefixed network).
   web:
+    name: space-server_web
     external: true
 
 volumes:
