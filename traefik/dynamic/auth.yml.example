@@ -3,7 +3,11 @@ http:
     auth:
       basicAuth:
         users:
-          - "admin:$$apr1$$.Dm1n6lI$$nirsFCp2m2JCZ.wiHYtqz."
+          # Replace with your own hash. Generate with:
+          #   docker run --rm -i httpd:2-alpine htpasswd -niB admin <<< 'your-strong-password'
+          # Use bcrypt ($2y$...) — NOT apr1 ($apr1$...), which is weak.
+          # In a Traefik file-provider yaml (this file), use a SINGLE $ — no escaping.
+          - "admin:REPLACE_WITH_BCRYPT_HASH"
     security-headers:
       headers:
         stsSeconds: 31536000
@@ -12,15 +16,14 @@ http:
         frameDeny: true
         contentTypeNosniff: true
         browserXssFilter: true
-    # Security headers for webmail (allows iframes for Roundcube)
+        referrerPolicy: "strict-origin-when-cross-origin"
     mail-headers:
       headers:
         stsSeconds: 31536000
         stsIncludeSubdomains: true
         forceSTSHeader: true
         frameDeny: false
-        contentTypeNosniff: true
-        browserXssFilter: true
-        referrerPolicy: "strict-origin-when-cross-origin"
-        # Relaxed CSP for Roundcube webmail compatibility
+        contentTypeNosniff: false
+        browserXssFilter: false
+        referrerPolicy: strict-origin-when-cross-origin
         contentSecurityPolicy: "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; frame-ancestors *;"

@@ -1,4 +1,4 @@
-# Postfix accounts configuration
+# Postfix accounts configuration (TEMPLATE — copy to postfix-accounts.cf)
 # This file is auto-generated from MAIL_ACCOUNTS environment variable
 # Format: user@domain|{password_hash}|uid:gid
 #

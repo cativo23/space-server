@@ -3,8 +3,16 @@
 *.env
 !.env.example
 
+# Production credential files (use the *.example templates as a starting point)
+traefik/dynamic/auth.yml
+mail-server/docker-mailserver/accounts/postfix-accounts.cf
+mail-server/docker-mailserver/accounts/dovecot-accounts.cf
+
+# Defensive: any plaintext credential dump
+space-server-credentials.txt
+
 # Let's Encrypt certificates
-traefik/letsencrypt/acme.json
+traefik/letsencrypt/
 
 # Grafana persistent data
 grafana-data/

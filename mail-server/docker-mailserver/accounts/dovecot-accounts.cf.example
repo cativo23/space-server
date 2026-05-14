@@ -1,4 +1,4 @@
-# Dovecot accounts configuration
+# Dovecot accounts configuration (TEMPLATE — copy to dovecot-accounts.cf)
 # This file is auto-generated from MAIL_ACCOUNTS environment variable
 #
 # To add accounts manually, use:

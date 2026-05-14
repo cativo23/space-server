@@ -30,7 +30,9 @@ services:
       - dockerproxy
     volumes:
       - "./traefik/traefik.yml:/etc/traefik/traefik.yml:ro"
-      - "./traefik/dynamic/auth.yml:/etc/traefik/dynamic/auth.yml:ro"
+      # Bind the whole dynamic/ dir (not just auth.yml) so in-place edits
+      # don't break the bind via inode replacement (sed -i, atomic moves).
+      - "./traefik/dynamic:/etc/traefik/dynamic:ro"
       - "./traefik/letsencrypt:/letsencrypt"
     labels:
       - "traefik.enable=true"
