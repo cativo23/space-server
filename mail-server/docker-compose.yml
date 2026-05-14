@@ -45,6 +45,13 @@ services:
       # Logging
       - LOG_LEVEL=info
 
+      # SMTP relay for outbound mail (Hetzner blocks port 25 outbound).
+      # Values come from .env on the host; empty default means no relay.
+      - RELAY_HOST=${RELAY_HOST:-}
+      - RELAY_PORT=${RELAY_PORT:-25}
+      - RELAY_USER=${RELAY_USER:-}
+      - RELAY_PASSWORD=${RELAY_PASSWORD:-}
+
       # Email accounts (auto-generates postfix-accounts.cf on first start)
       - MAIL_ACCOUNTS=${MAIL_ACCOUNTS}
     networks:
