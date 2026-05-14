@@ -37,7 +37,7 @@ This repo documents the entire process - the 30+ commits debugging the mail serv
 └── Traefik handling automatic SSL for everything
 ```
 
-**Migration:** 12 minutes of total downtime to move everything from the laptop. See [the blog post](blog/migracion-servidor-completa.md) for the complete process with scripts.
+**Migration:** 12 minutes of total downtime to move everything from the laptop.
 
 ## Tech stack
 
@@ -64,17 +64,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-**Important note:** If you're going to use the mail server, you need to configure DNS correctly (MX, SPF, DKIM records). See [the mail server guide](blog/self-hosted-email-server.md) that documents the 30+ commits it took me to get it working.
-
-## Real documentation
-
-I wrote technical blog posts about the process because generic documentation didn't help me when I was doing this:
-
-- **[Setting Up a Self-Hosted Email Server](blog/self-hosted-email-server.md)** - Complete mail server setup. Includes all the errors I found and how I fixed them.
-
-- **[Complete Migration: From Laptop to VPS](blog/migracion-servidor-completa.md)** - How I migrated 15+ services with automated scripts. 12 minutes of downtime, zero data loss.
-
-- **[Debugging Gateway Timeout in Webmail](blog/debugging-webmail-gateway-timeout.md)** - Technical deep-dive of post-migration debugging. Network mismatch and permissions.
+**Important note:** If you're going to use the mail server, you need to configure DNS correctly (MX, SPF, DKIM records). It took me 30+ commits to get it working properly.
 
 ## Things I learned
 
@@ -106,7 +96,7 @@ space-server/
 │   ├── 1-backup-cativo.sh
 │   ├── 2-download-backup.sh
 │   └── ...
-└── blog/                       # Technical posts (not committed)
+└── ...
 ```
 
 ## Requirements
