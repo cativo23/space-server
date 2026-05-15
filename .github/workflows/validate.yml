@@ -1,0 +1,62 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/docker-compose.yml"
+      - "prometheus/**"
+      - "alertmanager/**"
+      - "traefik/**"
+      - "grafana/**"
+      - ".github/workflows/validate.yml"
+  pull_request:
+    paths:
+      - "**/docker-compose.yml"
+      - "prometheus/**"
+      - "alertmanager/**"
+      - "traefik/**"
+      - "grafana/**"
+
+jobs:
+  compose:
+    name: docker compose config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: validate root compose
+        run: docker compose -f docker-compose.yml config --quiet
+
+      - name: validate mail-server compose
+        run: docker compose -f mail-server/docker-compose.yml config --quiet
+
+      - name: validate dozzle compose
+        run: docker compose -f dozzle/docker-compose.yml config --quiet
+
+      - name: validate uptime-kuma compose
+        run: docker compose -f uptime-kuma/docker-compose.yml config --quiet
+
+  prometheus:
+    name: prometheus + alertmanager rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: prometheus config
+        run: |
+          docker run --rm -v "$PWD/prometheus":/etc/prometheus \
+            --entrypoint promtool prom/prometheus:latest \
+            check config /etc/prometheus/prometheus.yml
+
+      - name: prometheus alert rules
+        run: |
+          docker run --rm -v "$PWD/prometheus":/etc/prometheus \
+            --entrypoint promtool prom/prometheus:latest \
+            check rules /etc/prometheus/alert_rules.yml
+
+      - name: alertmanager config
+        run: |
+          docker run --rm -v "$PWD/alertmanager":/etc/alertmanager \
+            --entrypoint amtool prom/alertmanager:latest \
+            check-config /etc/alertmanager/alertmanager.yml
