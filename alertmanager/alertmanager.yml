@@ -1,0 +1,23 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: discord
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: discord
+    webhook_configs:
+      - url: http://alertmanager-discord:9094/
+        send_resolved: true
+
+inhibit_rules:
+  # If a host disk goes critical, suppress the warning-level alert for the same mountpoint
+  - source_matchers:
+      - severity = critical
+    target_matchers:
+      - severity = warning
+    equal: ['alertname', 'instance', 'mountpoint']

@@ -1,0 +1,84 @@
+groups:
+  - name: host
+    interval: 30s
+    rules:
+      - alert: HostDiskSpaceLow
+        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk >85% on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is at {{ $value | humanizePercentage }}."
+
+      - alert: HostDiskSpaceCritical
+        expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes) > 0.95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk >95% on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+          description: "Filesystem {{ $labels.mountpoint }} is at {{ $value | humanizePercentage }}. Imminent failure risk."
+
+      - alert: HostMemoryHigh
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.90
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memory >90% on {{ $labels.instance }}"
+          description: "Available memory has been under 10% for 15m. Current usage: {{ $value | humanizePercentage }}."
+
+      - alert: HostLoadHigh
+        expr: node_load5 > 2 * count without (cpu, mode) (node_cpu_seconds_total{mode="idle"})
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Load5 > 2x CPU count on {{ $labels.instance }}"
+          description: "5-min load average is {{ $value }} on a host with {{ with query \"count without (cpu, mode) (node_cpu_seconds_total{mode=\\\"idle\\\"})\" }}{{ . | first | value }}{{ end }} CPUs."
+
+  - name: containers
+    interval: 30s
+    rules:
+      - alert: ContainerRestartLoop
+        expr: increase(container_start_time_seconds[15m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} restarting repeatedly"
+          description: "Container {{ $labels.name }} has restarted more than twice in the last 15 minutes."
+
+      - alert: ContainerDown
+        expr: time() - container_last_seen{name!=""} > 300
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.name }} not seen in >5min"
+          description: "cAdvisor has not seen container {{ $labels.name }} for over 5 minutes."
+
+  - name: tls
+    interval: 60s
+    rules:
+      - alert: TraefikCertExpiringSoon
+        expr: traefik_tls_certs_not_after - time() < 14 * 86400
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS cert for {{ $labels.sans }} expires in <14d"
+          description: "Cert SANs={{ $labels.sans }} expires at {{ $value | humanizeTimestamp }}. Let's Encrypt auto-renews around 30d, so this should self-heal — investigate ACME logs if it doesn't."
+
+  - name: prometheus
+    interval: 60s
+    rules:
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus target {{ $labels.job }} ({{ $labels.instance }}) down"
+          description: "Scrape target has been down for >10 minutes."
