@@ -31,13 +31,13 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 
 - [ ] **F7. Network segmentation.** Single `web` network mixes edge, monitoring, app data. Split into `edge` (Traefik only public-facing), `apps`, `mail`, `monitoring`. Backend DBs (Ghost MySQL, portfolio MySQL/Redis) should never touch `edge`.
 - [ ] **F8. DNS-01 challenge.** `traefik.yml` uses `tlsChallenge` — fine for explicit hostnames, blocks wildcards. Switch to `dnsChallenge` with Hetzner DNS provider plugin if we ever want `*.cativo.dev`.
-- [ ] **F13. Trim `dockerproxy` permissions.** Drop `SWARM=1`, `TASKS=1`, `SERVICES=1` (not used). Smaller attack surface.
+- [x] **F13. Trim `dockerproxy` permissions.** Dropped `SWARM=1`, `TASKS=1`, `SERVICES=1` from the docker-socket-proxy env — not relevant outside Swarm mode. Smaller attack surface for Traefik's docker-provider discovery.
 - [ ] **F14. Don't hardcode host paths in compose.** `mail-server/docker-compose.yml:22` references `/home/cativo23/space-server/traefik/letsencrypt/acme.json`. Breaks if Ansible deploys under a different user. Use a `${TRAEFIK_ACME_PATH}` env var with no hardcoded default.
 
 ## P3 — Quality of life
 
-- [ ] **F9.** Add `depends_on: prometheus` to grafana.
-- [ ] **F10.** Set Prometheus retention (`--storage.tsdb.retention.time=30d`) and a named volume.
+- [x] **F9.** Added `depends_on: prometheus` to grafana so startup order is deterministic.
+- [x] **F10.** Prometheus retention set to 30d via `--storage.tsdb.retention.time=30d`; persistent volume already in place from F5.
 - [ ] **F12.** Replace Roundcube inline heredoc entrypoint (`mail-server/docker-compose.yml:79-101`) with the existing `roundcube-*.conf.php` files mounted as volumes.
 - [ ] **F15.** Pin all image tags (no `:latest`). Add Renovate or Watchtower for managed updates.
 - [ ] **F16.** SOPS or `age` for encrypted secrets in git (enables real Ansible reproducibility without leaking `.env`).

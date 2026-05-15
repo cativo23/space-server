@@ -3,11 +3,10 @@ services:
     image: tecnativa/docker-socket-proxy:latest
     container_name: dockerproxy
     environment:
+      # Minimal API surface for Traefik docker-provider on a non-Swarm host.
+      # SERVICES/TASKS/SWARM dropped (F13) — only relevant for Docker Swarm mode.
       - CONTAINERS=1
       - NETWORKS=1
-      - SERVICES=1
-      - SWARM=1
-      - TASKS=1
       - INFO=1
       - EVENTS=1
       - VERSION=1
@@ -69,6 +68,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
       - '--web.enable-lifecycle'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -153,6 +153,8 @@ services:
     image: grafana/grafana
     container_name: grafana
     restart: unless-stopped
+    depends_on:
+      - prometheus
     environment:
       GF_SECURITY_ADMIN_USER: ${GF_ADMIN_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD}
