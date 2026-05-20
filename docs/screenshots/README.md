@@ -10,6 +10,7 @@ Visual evidence of the stack in production. Captures referenced from the main [R
 | `grafana-traefik.jpg` | Traefik Standalone dashboard — HTTP code distribution (GET[200] 61%, GET[404] 16%, GET[302] 12%, …), requests per entrypoint, Apdex per method, top slow services, most-requested services | `https://grafana.cativo.dev/d/n5bu_kv45/traefik-official-standalone-dashboard` |
 | `uptime-kuma.jpg` | Uptime Kuma dashboard — 11 monitors registered (one per public subdomain), Quick Stats: Up 11 / Down 0. Event log shows mixed `200 OK` and `401 Unauthorized` heartbeats (auth-gated services counted as Up since 401 means "service responding"). Captured after F22 fix. | `https://uptime.cativo.dev/dashboard` |
 | `grafana-cadvisor.jpg` | cAdvisor exporter dashboard — per-container CPU% time-series with legend (alertmanager 0.0983%, cadvisor 7.30%, ghost-blog-prod-db-1 0.595%, …), Memory Usage and Memory Cached panels. Captured after F21 fix (cAdvisor bumped to v0.55.1 for containerd-snapshotter support). | `https://grafana.cativo.dev/d/pMEd7m0Mz/cadvisor-exporter` |
+| `status-page.jpg` | Public Uptime Kuma status page — "All Systems Operational" headline, 11 monitors grouped into Tools / Mail / Web, all 100% green. Configured via the Kuma UI per `docs/runbooks/status-page.md` Step 1. | `https://uptime.cativo.dev/status/public` |
 
 ## Pending
 

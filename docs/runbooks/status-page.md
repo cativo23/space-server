@@ -4,6 +4,10 @@ Uptime Kuma's built-in status page is the cheapest "health API" we can offer pub
 
 This runbook makes the status page available at **`https://uptime.cativo.dev/status/public`** (or a custom slug). Optional Cloudflare CNAME hop to alias it as `status.cativo.dev`.
 
+> **Live as of 2026-05-20**: the `/status/public` page is configured with three groups (Tools / Mail / Web) and all 11 monitors. Status: All Systems Operational. See `docs/screenshots/status-page.jpg`.
+
+> **Why the UI, not a script?** `uptime-kuma-api` 1.x is too far out of sync with Kuma 2.2's status-page API surface to automate cleanly: the `conditions` column, the `incident` response shape, and `_build_status_page_data`'s kwarg list have all drifted. Each library-side patch surfaces the next mismatch. UI takes ~5 minutes — not worth fighting.
+
 ## Prerequisites
 
 - Uptime Kuma already deployed (`uptime-kuma` container)
