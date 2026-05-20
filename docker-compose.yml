@@ -1,6 +1,6 @@
 services:
   dockerproxy:
-    image: tecnativa/docker-socket-proxy:0.4.2
+    image: tecnativa/docker-socket-proxy:v0.4.2
     container_name: dockerproxy
     environment:
       # Minimal API surface for Traefik docker-provider on a non-Swarm host.
