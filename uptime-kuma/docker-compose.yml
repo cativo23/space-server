@@ -11,14 +11,15 @@ services:
       - "traefik.http.routers.uptime.entrypoints=websecure"
       - "traefik.http.routers.uptime.tls.certresolver=letsencryptresolver"
       - "traefik.http.routers.uptime.middlewares=security-headers@file"
-      # status.cativo.dev → redirect to /status/public on uptime.cativo.dev
+      # status.cativo.dev → masks /status/public on uptime-kuma (URL stays as
+      # status.cativo.dev in the browser). Only the root path is rewritten so
+      # asset paths (/styles, /js, /api/...) pass through unchanged.
       - "traefik.http.routers.uptime-status.rule=Host(`status.cativo.dev`)"
       - "traefik.http.routers.uptime-status.entrypoints=websecure"
       - "traefik.http.routers.uptime-status.tls.certresolver=letsencryptresolver"
-      - "traefik.http.routers.uptime-status.middlewares=status-redirect,security-headers@file"
-      - "traefik.http.middlewares.status-redirect.redirectregex.regex=^https?://status\\.cativo\\.dev(/.*)?$"
-      - "traefik.http.middlewares.status-redirect.redirectregex.replacement=https://uptime.cativo.dev/status/public"
-      - "traefik.http.middlewares.status-redirect.redirectregex.permanent=true"
+      - "traefik.http.routers.uptime-status.middlewares=status-rewrite,security-headers@file"
+      - "traefik.http.middlewares.status-rewrite.replacepathregex.regex=^/$$"
+      - "traefik.http.middlewares.status-rewrite.replacepathregex.replacement=/status/public"
     networks:
       - space-server_web
 
