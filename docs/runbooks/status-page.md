@@ -60,6 +60,8 @@ labels:
 
 Then in Cloudflare add a CNAME or A record pointing `status.cativo.dev` → `cativo.dev` (DNS only).
 
+> **Note:** `cativo.dev` already has a wildcard A record `*.cativo.dev → polaris2`, so this CNAME step is redundant — any new subdomain just needs the Traefik labels and ACME will provision the cert. Done 2026-05-20: `https://status.cativo.dev` 308-redirects to `https://uptime.cativo.dev/status/public`.
+
 ## Step 4 — surface in README
 
 Once the status page is live, replace the `Uptime Kuma` row in the README's "Public subdomains" table with two rows:
