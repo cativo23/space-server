@@ -33,7 +33,6 @@ Secrets stay out of the repo: `.env`, `traefik/dynamic/auth.yml`, mail account f
 ### Negative
 
 - Application stacks not yet integrated via `include:` still require manual coordination between repos.
-- The git history on `polaris2` started fresh on 2026-05-14; pre-existing local edits had to be reconciled with `git reset --mixed origin/main` followed by `git checkout -- .` for safe files.
 
 ### Follow-ups
 

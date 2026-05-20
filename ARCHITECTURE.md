@@ -19,7 +19,7 @@ graph TB
 
         subgraph net_web["space-server_web · 172.19.0.0/16 (bridge)"]
             direction LR
-            Traefik["🚦 Traefik v3.6<br/>:80 :443"]
+            Traefik["🚦 Traefik v3.6.17<br/>:80 :443"]
             DProxy["docker-socket-proxy<br/>read-only"]
 
             subgraph apps["Apps"]
@@ -61,7 +61,7 @@ graph TB
     PAPI --> PMysql
     PAPI --> PRedis
     Webmail -->|"STARTTLS"| Mail
-    Mail -.->|"outbound only"| Resend
+    Mail -.->|"STARTTLS<br/>outbound only"| Resend
 
     Prom -->|"scrape /metrics"| Node & CAdv & Traefik & AM
     Prom -->|"alerts"| AM
@@ -69,6 +69,8 @@ graph TB
     AMD -->|"https"| Discord
     Doz -->|"tcp:2375"| DProxy
 ```
+
+> Test/demo containers (e.g. `whoami`) are intentionally excluded from the diagram.
 
 ---
 

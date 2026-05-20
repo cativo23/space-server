@@ -25,19 +25,6 @@ Visual evidence of the stack in production. Captures referenced from the main [R
 - **Anonymize:** if any panel happens to surface a real email address or IP that isn't already public, blur it before committing.
 - **Optimize:** `oxipng -o 4 docs/screenshots/*.png` if you swap to PNG.
 
-## Capture guidelines
-
-- **Resolution:** 1920×1080 or 1440×900. Anything wider than 1920 wastes space in the README.
-- **Theme:** Grafana dark theme (default). Traefik default theme.
-- **Crop:** include enough chrome so it's recognizable, but trim the OS window frame.
-- **Anonymize:** if any panel happens to surface a real email address or IP that isn't already public, blur it before committing.
-- **Format:** PNG. Optimize with `pngquant` or `oxipng` before committing (most of these will be < 200 KB after compression).
-
-```bash
-# Quick optimization once you've dropped the PNGs in
-oxipng -o 4 docs/screenshots/*.png
-```
-
 ## Once added
 
 When all six are in place, surface them in the README by appending a "Screenshots" section near the architecture diagram:
@@ -47,6 +34,6 @@ When all six are in place, surface them in the README by appending a "Screenshot
 
 | | |
 |---|---|
-| ![Node Exporter](docs/screenshots/grafana-node-exporter.png) | ![Traefik](docs/screenshots/grafana-traefik.png) |
+| ![Node Exporter](docs/screenshots/grafana-node-exporter.jpg) | ![Traefik](docs/screenshots/grafana-traefik.jpg) |
 | ![cAdvisor](docs/screenshots/grafana-cadvisor.png) | ![Discord alert](docs/screenshots/discord-alert.png) |
 ```

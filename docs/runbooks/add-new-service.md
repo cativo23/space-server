@@ -91,7 +91,7 @@ curl -sS -u "admin:$TRAEFIK_PASS" https://traefik.cativo.dev/api/http/routers | 
 
 ## Anti-patterns to avoid
 
-- ❌ `image: vendor/thingy:latest` — kills reproducibility (see ADR-0001's follow-ups for Renovate)
+- ❌ `image: vendor/thingy:latest` — kills reproducibility (see ADR-0002's follow-ups for Renovate)
 - ❌ Hardcoding secrets in environment block — use `${VAR}` and document the var in `.env.example`
 - ❌ Mounting the DB on `space-server_web` — internal-only network or nothing
 - ❌ Cloudflare proxy turned on — breaks ACME challenge and may rewrite headers
