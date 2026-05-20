@@ -45,6 +45,8 @@ In Cloudflare → `cativo.dev` zone → **Page Rules**:
 
 ### Cleaner: Traefik label on uptime-kuma
 
+**Why redirect and not URL-mask?** A `replacepathregex` rewrite that turns `status.cativo.dev/` into `/status/public` on the backend gets the right HTML, but Kuma's Vue SPA client-side router sees the browser URL as `/` and immediately client-routes to `/dashboard` (login). The only way to mask without code changes to Kuma would be to set Kuma's "Init Page" to `/status/public` — which would also affect `uptime.cativo.dev/` (admin entry moves to `/dashboard`). Tried 2026-05-20, reverted; redirect is the cleanest option.
+
 Add a second rule to `uptime-kuma/docker-compose.yml`:
 
 ```yaml
