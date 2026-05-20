@@ -39,7 +39,7 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 - [x] **F9.** Added `depends_on: prometheus` to grafana so startup order is deterministic.
 - [x] **F10.** Prometheus retention set to 30d via `--storage.tsdb.retention.time=30d`; persistent volume already in place from F5.
 - [ ] **F12.** Replace Roundcube inline heredoc entrypoint (`mail-server/docker-compose.yml:79-101`) with the existing `roundcube-*.conf.php` files mounted as volumes.
-- [ ] **F15.** Pin all image tags (no `:latest`). Add Renovate or Watchtower for managed updates.
+- [~] **F15.** All image tags pinned to specific versions (prometheus:v3.11.2, grafana:13.0.1, alertmanager:v0.32.1, node-exporter:v1.11.1, dockerproxy:0.4.2, whoami:v1.11.0, mail:15.1.0, roundcube:1.6.15-apache, dozzle:v10.4.1, uptime-kuma:2.2.1; alertmanager-discord pinned by digest since maintainer doesn't tag). Renovate/Watchtower for auto-updates is still pending — recorded as a follow-up in ADR-0002.
 - [ ] **F16.** SOPS or `age` for encrypted secrets in git (enables real Ansible reproducibility without leaking `.env`).
 
 ## Deferred — tackle last
