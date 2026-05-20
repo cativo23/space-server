@@ -36,6 +36,8 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 
 ## P3 — Quality of life
 
+- [ ] **F21. cAdvisor not exposing per-container labels.** Discovered 2026-05-20 while screenshotting the Grafana cAdvisor dashboard — every panel reads "No data". Investigation: `container_last_seen` returns a single result with only `id="/"` (the root cgroup), not the expected per-container series with `name` / `image` labels. cgroup v2 on Ubuntu 24.04 plus `--docker_only=true` is the likely interaction. Try removing `--docker_only`, adding `--store_container_labels=true` explicitly, or adding `--containerd=/run/containerd/containerd.sock` if cAdvisor needs to read containerd directly. Recapture `docs/screenshots/grafana-cadvisor.jpg` once panels render.
+- [ ] **F22. Uptime Kuma has no monitors configured.** Discovered 2026-05-20 — `uptime.cativo.dev` shows empty Quick Stats and "No Monitors, please add one". Add HTTP(S) probes for all 12 public subdomains (cativo.dev, blog, api, mail, devi, grafana, prometheus, alertmanager, dozzle, uptime, traefik, plus the planned `status.cativo.dev`).
 - [x] **F9.** Added `depends_on: prometheus` to grafana so startup order is deterministic.
 - [x] **F10.** Prometheus retention set to 30d via `--storage.tsdb.retention.time=30d`; persistent volume already in place from F5.
 - [ ] **F12.** Replace Roundcube inline heredoc entrypoint (`mail-server/docker-compose.yml:79-101`) with the existing `roundcube-*.conf.php` files mounted as volumes.

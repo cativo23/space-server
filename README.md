@@ -107,6 +107,15 @@ graph LR
     StorageBox -.->|"(planned)"| Polaris2
 ```
 
+## Screenshots
+
+| Node Exporter Full | Traefik Standalone |
+|---|---|
+| ![Node Exporter](docs/screenshots/grafana-node-exporter.jpg) | ![Traefik](docs/screenshots/grafana-traefik.jpg) |
+| live host metrics — CPU 6%, RAM 29.1%, disk 36.4%, uptime 3.8 weeks | HTTP code distribution, requests per entrypoint, Apdex, top slow services |
+
+See [`docs/screenshots/`](docs/screenshots/) for the full set + capture guide.
+
 ## Production stories
 
 A few real incidents from running this. Each one taught me something I now apply by default.
