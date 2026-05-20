@@ -11,6 +11,14 @@ services:
       - "traefik.http.routers.uptime.entrypoints=websecure"
       - "traefik.http.routers.uptime.tls.certresolver=letsencryptresolver"
       - "traefik.http.routers.uptime.middlewares=security-headers@file"
+      # status.cativo.dev → redirect to /status/public on uptime.cativo.dev
+      - "traefik.http.routers.uptime-status.rule=Host(`status.cativo.dev`)"
+      - "traefik.http.routers.uptime-status.entrypoints=websecure"
+      - "traefik.http.routers.uptime-status.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.uptime-status.middlewares=status-redirect,security-headers@file"
+      - "traefik.http.middlewares.status-redirect.redirectregex.regex=^https?://status\\.cativo\\.dev(/.*)?$"
+      - "traefik.http.middlewares.status-redirect.redirectregex.replacement=https://uptime.cativo.dev/status/public"
+      - "traefik.http.middlewares.status-redirect.redirectregex.permanent=true"
     networks:
       - space-server_web
 
