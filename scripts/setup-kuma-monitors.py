@@ -54,6 +54,17 @@ def main() -> int:
 
     with UptimeKumaApi(KUMA_URL) as api:
         api.login(username, password)
+
+        # Kuma 2.2+ added a NOT NULL `conditions` column, but uptime-kuma-api
+        # 1.x doesn't know about it. Patch the dict-building hook to inject
+        # an empty list so the INSERT satisfies the constraint.
+        _build = api._build_monitor_data
+        def _build_with_conditions(**kwargs):
+            data = _build(**kwargs)
+            data.setdefault("conditions", [])
+            return data
+        api._build_monitor_data = _build_with_conditions
+
         existing = {m["name"] for m in api.get_monitors()}
         print(f"connected to {KUMA_URL} — {len(existing)} existing monitors")
 
