@@ -9,12 +9,12 @@ Visual evidence of the stack in production. Captures referenced from the main [R
 | `grafana-node-exporter.jpg` | Node Exporter Full dashboard — live CPU 6%, RAM 29.1%, disk 36.4%, swap 0.8%, uptime 3.8 weeks, plus the CPU Basic / Memory Basic time-series for the past 3 hours | `https://grafana.cativo.dev/d/rYdddlPWk/node-exporter-full` |
 | `grafana-traefik.jpg` | Traefik Standalone dashboard — HTTP code distribution (GET[200] 61%, GET[404] 16%, GET[302] 12%, …), requests per entrypoint, Apdex per method, top slow services, most-requested services | `https://grafana.cativo.dev/d/n5bu_kv45/traefik-official-standalone-dashboard` |
 | `uptime-kuma.jpg` | Uptime Kuma dashboard — note: empty Quick Stats here; monitors still pending (TODO) | `https://uptime.cativo.dev` |
+| `grafana-cadvisor.jpg` | cAdvisor exporter dashboard — per-container CPU% time-series with legend (alertmanager 0.0983%, cadvisor 7.30%, ghost-blog-prod-db-1 0.595%, …), Memory Usage and Memory Cached panels. Captured after F21 fix (cAdvisor bumped to v0.55.1 for containerd-snapshotter support). | `https://grafana.cativo.dev/d/pMEd7m0Mz/cadvisor-exporter` |
 
 ## Pending
 
 | Filename | Why not captured | Next step |
 |---|---|---|
-| `grafana-cadvisor.jpg` | Dashboard renders "No data" because our cAdvisor only emits `id`/`instance`/`cpu`/`job` labels (missing `name`/`image`) — likely cgroup v2 + `--docker_only=true` interaction. Tracked as F21 in `IMPROVEMENT-PLAN.md` | Fix cAdvisor flags, then re-capture |
 | `traefik-dashboard.jpg` | Traefik UI loads but its XHR API calls reject URL-embedded basic auth (Chrome doesn't propagate creds from URL into fetch headers) | Capture from a browser session with the credential already in the Chrome credential manager |
 | `discord-alert.jpg` | Discord client only — not accessible from the MCP browser | Capture from your Discord client after firing a test alert with `docker exec alertmanager wget --post-data='[{"labels":{"alertname":"TestF5","severity":"warning","instance":"polaris2"}}]' --header=Content-Type:application/json http://localhost:9093/api/v2/alerts` |
 
