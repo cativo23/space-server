@@ -107,6 +107,15 @@ graph LR
     StorageBox -.->|"(planned)"| Polaris2
 ```
 
+## Screenshots
+
+| Node Exporter Full | Traefik Standalone |
+|---|---|
+| ![Node Exporter](docs/screenshots/grafana-node-exporter.jpg) | ![Traefik](docs/screenshots/grafana-traefik.jpg) |
+| live host metrics — CPU 6%, RAM 29.1%, disk 36.4%, uptime 3.8 weeks | HTTP code distribution, requests per entrypoint, Apdex, top slow services |
+
+See [`docs/screenshots/`](docs/screenshots/) for the full set + capture guide.
+
 ## Production stories
 
 A few real incidents from running this. Each one taught me something I now apply by default.
@@ -130,6 +139,15 @@ More incidents and their fixes live in commit messages — they're all `fix(scop
 ## How I work
 
 The [`IMPROVEMENT-PLAN.md`](IMPROVEMENT-PLAN.md) tracks every finding from a structured architecture review: P0 critical bugs and security, P1 resilience and observability, P2 hardening, P3 quality-of-life. Items get checked off with a one-line note explaining what shipped and a reference back to the commit. It's the same artifact I'd expect to keep on a small team.
+
+## Documentation
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — Detailed topology, request flows (HTTPS, mail, alerts), network boundaries, persistence layer, deployment flow
+- **[docs/decisions/](docs/decisions/)** — Architecture Decision Records: single source of truth, observability adoption, SMTP relay choice. Nygard format, current index in `docs/decisions/README.md`
+- **[docs/runbooks/](docs/runbooks/)** — Step-by-step operational procedures (status page setup, adding a new service)
+- **[docs/screenshots/](docs/screenshots/)** — Visual evidence of the stack (Grafana dashboards, Discord alerts, Traefik routing)
+- **[IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md)** — Active findings roadmap with status per item
+- **[CHANGELOG.md](CHANGELOG.md)** — Keep-a-Changelog format
 
 ## Tech stack
 

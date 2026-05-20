@@ -1,6 +1,6 @@
 services:
   dockerproxy:
-    image: tecnativa/docker-socket-proxy:latest
+    image: tecnativa/docker-socket-proxy:0.4.2
     container_name: dockerproxy
     environment:
       # Minimal API surface for Traefik docker-provider on a non-Swarm host.
@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
 
   traefik:
-    image: traefik:v3.6
+    image: traefik:v3.6.17
     container_name: traefik
     ports:
       - "80:80"
@@ -48,7 +48,7 @@ services:
       retries: 3
 
   whoami:
-    image: traefik/whoami
+    image: traefik/whoami:v1.11.0
     container_name: whoami
     labels:
       - "traefik.enable=true"
@@ -62,7 +62,7 @@ services:
     restart: unless-stopped
 
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:v3.11.2
     container_name: prometheus
     restart: unless-stopped
     command:
@@ -85,7 +85,7 @@ services:
       - web
 
   alertmanager:
-    image: prom/alertmanager
+    image: prom/alertmanager:v0.32.1
     container_name: alertmanager
     restart: unless-stopped
     command:
@@ -107,7 +107,9 @@ services:
   alertmanager-discord:
     # Translates Alertmanager webhook payloads → Discord webhook format.
     # DISCORD_WEBHOOK comes from .env (gitignored).
-    image: benjojo/alertmanager-discord:latest
+    # Pinned by digest — benjojo doesn't ship versioned tags, and the image
+    # is mostly stable; Renovate (when added) can bump this on its own.
+    image: benjojo/alertmanager-discord@sha256:7d27cd8494b269fe592cf6a9d7f6bdf14ac628bba34c381dc43cf533eaa95158
     container_name: alertmanager-discord
     restart: unless-stopped
     environment:
@@ -116,7 +118,7 @@ services:
       - web
 
   node-exporter:
-    image: prom/node-exporter
+    image: prom/node-exporter:v1.11.1
     container_name: node-exporter
     restart: unless-stopped
     pid: host
@@ -150,7 +152,7 @@ services:
       - web
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:13.0.1
     container_name: grafana
     restart: unless-stopped
     depends_on:

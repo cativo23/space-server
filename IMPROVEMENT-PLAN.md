@@ -23,7 +23,7 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 
 ## P1 — Resilience and observability
 
-- [x] **F5. Alerting + Grafana dashboards.** Done 2026-05-14. Added `node_exporter`, `cAdvisor`, `Alertmanager`, and a `benjojo/alertmanager-discord` sidecar that translates AM webhooks → Discord. Prometheus now scrapes 5 targets; 8 alert rules across host (disk, mem, load), containers (restart loop, missing), TLS (cert <14d), and scrape-up. Grafana datasource (uid=prometheus) and 3 dashboards (Node Exporter Full 1860, Traefik 3 17347, cAdvisor 14282) provisioned via mounted files. End-to-end verified: fired test alert via AM API → arrived in `#alerts` Discord channel. `DISCORD_WEBHOOK` secret lives in `~/space-server/.env` on polaris2 (gitignored). Blackbox-exporter deferred — Uptime Kuma already covers external probes.
+- [x] **F5. Alerting + Grafana dashboards.** Done 2026-05-14. Added `node_exporter`, `cAdvisor`, `Alertmanager`, and a `benjojo/alertmanager-discord` sidecar that translates AM webhooks → Discord. Prometheus now scrapes 5 targets; 8 alert rules across host (disk, mem, load), containers (restart loop, missing), TLS (cert <14d), and scrape-up. Grafana datasource (uid=prometheus) and 3 dashboards (Node Exporter Full 1860, Traefik 3 17346, cAdvisor 14282) provisioned via mounted files. End-to-end verified: fired test alert via AM API → arrived in `#alerts` Discord channel. `DISCORD_WEBHOOK` secret lives in `~/space-server/.env` on polaris2 (gitignored). Blackbox-exporter deferred — Uptime Kuma already covers external probes.
 - [ ] **F6. Log retention.** Dozzle is a viewer; logs vanish on container restart. Add Loki + Promtail (or `loki-docker-driver` plugin). Plug into existing Grafana.
 - [x] **F11. SMTP relay via Resend** (free tier, 3k/mo). Configured 2026-05-14. Domain `cativo.dev` verified at Resend (DKIM `resend._domainkey`, MX/SPF on `send.cativo.dev`, no impact on existing root SPF/DKIM). docker-mailserver `RELAY_*` env vars driven from gitignored `.env` on polaris2; outbound now routes through `smtp.resend.com:587` instead of trying direct port 25.
 
@@ -36,10 +36,12 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 
 ## P3 — Quality of life
 
+- [ ] **F21. cAdvisor not exposing per-container labels.** Discovered 2026-05-20 while screenshotting the Grafana cAdvisor dashboard — every panel reads "No data". Investigation: `container_last_seen` returns a single result with only `id="/"` (the root cgroup), not the expected per-container series with `name` / `image` labels. cgroup v2 on Ubuntu 24.04 plus `--docker_only=true` is the likely interaction. Try removing `--docker_only`, adding `--store_container_labels=true` explicitly, or adding `--containerd=/run/containerd/containerd.sock` if cAdvisor needs to read containerd directly. Recapture `docs/screenshots/grafana-cadvisor.jpg` once panels render.
+- [ ] **F22. Uptime Kuma has no monitors configured.** Discovered 2026-05-20 — `uptime.cativo.dev` shows empty Quick Stats and "No Monitors, please add one". Add HTTP(S) probes for all 12 public subdomains (cativo.dev, blog, api, mail, devi, grafana, prometheus, alertmanager, dozzle, uptime, traefik, plus the planned `status.cativo.dev`).
 - [x] **F9.** Added `depends_on: prometheus` to grafana so startup order is deterministic.
 - [x] **F10.** Prometheus retention set to 30d via `--storage.tsdb.retention.time=30d`; persistent volume already in place from F5.
 - [ ] **F12.** Replace Roundcube inline heredoc entrypoint (`mail-server/docker-compose.yml:79-101`) with the existing `roundcube-*.conf.php` files mounted as volumes.
-- [ ] **F15.** Pin all image tags (no `:latest`). Add Renovate or Watchtower for managed updates.
+- [~] **F15.** All image tags pinned to specific versions (prometheus:v3.11.2, grafana:13.0.1, alertmanager:v0.32.1, node-exporter:v1.11.1, dockerproxy:0.4.2, whoami:v1.11.0, mail:15.1.0, roundcube:1.6.15-apache, dozzle:v10.4.1, uptime-kuma:2.2.1; alertmanager-discord pinned by digest since maintainer doesn't tag). Renovate/Watchtower for auto-updates is still pending — recorded as a follow-up in ADR-0002.
 - [ ] **F16.** SOPS or `age` for encrypted secrets in git (enables real Ansible reproducibility without leaking `.env`).
 
 ## Deferred — tackle last

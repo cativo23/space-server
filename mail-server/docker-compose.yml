@@ -1,6 +1,6 @@
 services:
   mail:
-    image: ghcr.io/docker-mailserver/docker-mailserver:latest
+    image: ghcr.io/docker-mailserver/docker-mailserver:15.1.0
     container_name: mail
     hostname: mail
     domainname: ${MAIL_DOMAIN}
@@ -72,7 +72,7 @@ services:
 
   # Roundcube Webmail
   webmail:
-    image: roundcube/roundcubemail:latest
+    image: roundcube/roundcubemail:1.6.15-apache
     container_name: webmail
     environment:
       # IMAP over STARTTLS, SMTP submission over STARTTLS.
