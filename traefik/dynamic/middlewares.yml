@@ -1,0 +1,7 @@
+http:
+  middlewares:
+    mail-ratelimit:
+      rateLimit:
+        average: 10
+        burst: 20
+        period: 1m
