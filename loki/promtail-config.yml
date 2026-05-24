@@ -25,3 +25,6 @@ scrape_configs:
         target_label: service
       - source_labels: [__meta_docker_compose_project]
         target_label: project
+      - source_labels: [__meta_docker_container_name]
+        regex: '/(.+)'
+        target_label: app
