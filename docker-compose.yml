@@ -71,6 +71,7 @@ services:
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
     networks:
       - web
+      - monitoring
     mem_limit: 1g
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
@@ -98,6 +99,7 @@ services:
       - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
     networks:
       - web
+      - monitoring
     mem_limit: 128m
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/ready"]
@@ -117,7 +119,7 @@ services:
     environment:
       - DISCORD_WEBHOOK=${DISCORD_WEBHOOK:-}
     networks:
-      - web
+      - monitoring
     mem_limit: 64m
 
   node-exporter:
@@ -133,7 +135,7 @@ services:
     volumes:
       - /:/host:ro,rslave
     networks:
-      - web
+      - monitoring
     mem_limit: 64m
 
   cadvisor:
@@ -157,7 +159,7 @@ services:
       - '--containerd=/run/containerd/containerd.sock'
       - '--disable_metrics=disk,diskIO,tcp,udp,percpu,sched,process,hugetlb,referenced_memory,resctrl,cpu_topology,memory_numa'
     networks:
-      - web
+      - monitoring
     mem_limit: 256m
 
   grafana:
@@ -185,6 +187,7 @@ services:
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     networks:
       - web
+      - monitoring
     mem_limit: 512m
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
@@ -195,6 +198,8 @@ services:
 
 networks:
   web:
+    driver: bridge
+  monitoring:
     driver: bridge
 
 volumes:

@@ -7,7 +7,7 @@ services:
       - ./loki-config.yml:/etc/loki/loki-config.yml:ro
       - loki-data:/loki
     networks:
-      - web
+      - monitoring
     restart: unless-stopped
     mem_limit: 256m
     healthcheck:
@@ -25,7 +25,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     networks:
-      - web
+      - monitoring
     restart: unless-stopped
     mem_limit: 128m
     depends_on:
@@ -36,6 +36,6 @@ volumes:
   loki-data:
 
 networks:
-  web:
+  monitoring:
     external: true
-    name: space-server_web
+    name: space-server_monitoring
