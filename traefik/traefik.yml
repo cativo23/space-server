@@ -19,7 +19,7 @@ providers:
     watch: true
     exposedByDefault: false
   file:
-    filename: /etc/traefik/dynamic/auth.yml
+    directory: /etc/traefik/dynamic
     watch: true
 
 api:
