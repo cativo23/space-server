@@ -88,29 +88,7 @@ services:
       - web
     volumes:
       - webmail-data:/var/roundcube/db
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        mkdir -p /var/www/html/config &&
-        echo '<?php
-        $$config["plugins"] = [];
-        $$config["imap_host"] = "tls://mail:143";
-        $$config["smtp_host"] = "tls://mail:587";
-        $$config["smtp_port"] = 587;
-        $$config["smtp_user"] = "%u";
-        $$config["smtp_pass"] = "%p";
-        $$config["smtp_auth_type"] = "PLAIN";
-        $$config["smtp_use_tls"] = true;
-        $$config["smtp_tls_wrapper"] = false;
-        $$config["db_dsnw"] = "sqlite:////var/roundcube/db/db.sqlite";
-        $$config["skin"] = "elastic";
-        $$config["imap_conn_options"]["ssl"]["verify_peer"] = false;
-        $$config["imap_conn_options"]["ssl"]["verify_peer_name"] = false;
-        $$config["smtp_conn_options"]["ssl"]["verify_peer"] = false;
-        $$config["smtp_conn_options"]["ssl"]["verify_peer_name"] = false;
-        ' > /var/www/html/config/config.inc.php &&
-        exec /docker-entrypoint.sh apache2-foreground
+      - ./roundcube-config.inc.php:/var/www/html/config/config.inc.php:ro
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mail.rule=Host(`mail.${MAIL_DOMAIN}`)"

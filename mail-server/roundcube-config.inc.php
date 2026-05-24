@@ -1,7 +1,11 @@
 <?php
+// Roundcube configuration for docker-mailserver (space-server stack).
+// IMAP and SMTP use STARTTLS to the internal Docker container; peer
+// verification is disabled because docker-mailserver uses a self-signed cert.
+
 $config['plugins'] = [];
-$config['imap_host'] = 'mail:143';
-$config['smtp_host'] = 'mail:587';
+$config['imap_host'] = 'tls://mail:143';
+$config['smtp_host'] = 'tls://mail:587';
 $config['smtp_port'] = 587;
 $config['smtp_user'] = '%u';
 $config['smtp_pass'] = '%p';
@@ -14,3 +18,7 @@ $config['imap_conn_options']['ssl']['verify_peer'] = false;
 $config['imap_conn_options']['ssl']['verify_peer_name'] = false;
 $config['smtp_conn_options']['ssl']['verify_peer'] = false;
 $config['smtp_conn_options']['ssl']['verify_peer_name'] = false;
+
+// Include Docker-generated config (driven by ROUNDCUBEMAIL_* env vars).
+// This must be last so env-var overrides take effect after our defaults.
+include(__DIR__ . '/config.docker.inc.php');
