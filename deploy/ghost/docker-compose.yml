@@ -15,6 +15,7 @@ services:
       mail__options__port: ${SMTP_PORT}
       mail__options__auth__user: ${SMTP_USER}
       mail__options__auth__pass: ${SMTP_PASS}
+      mail__from: noreply@cativo.dev
       imageOptimization__resize: false
       NODE_ENV: production
     volumes:
