@@ -1,0 +1,61 @@
+name: ghost-blog-prod
+services:
+  ghost:
+    image: ghost:5-alpine
+    restart: unless-stopped
+    environment:
+      database__client: mysql
+      database__connection__host: db
+      database__connection__user: ghost
+      database__connection__password: ${DB_PASSWORD}
+      database__connection__database: ghost
+      url: https://blog.cativo.dev
+      mail__transport: SMTP
+      mail__options__host: ${SMTP_HOST}
+      mail__options__port: ${SMTP_PORT}
+      mail__options__auth__user: ${SMTP_USER}
+      mail__options__auth__pass: ${SMTP_PASS}
+      imageOptimization__resize: false
+      NODE_ENV: production
+    volumes:
+      - ghost-content:/var/lib/ghost/content
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ghost-blog.rule=Host(`blog.cativo.dev`)"
+      - "traefik.http.routers.ghost-blog.entrypoints=websecure"
+      - "traefik.http.routers.ghost-blog.tls.certresolver=letsencryptresolver"
+      - "traefik.http.services.ghost-blog.loadbalancer.server.port=2368"
+      - "traefik.docker.network=space-server_web"
+    networks:
+      - ghost-internal
+      - space-server_web
+
+  db:
+    image: mysql:5.7
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ghost
+      MYSQL_USER: ghost
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+      interval: 3s
+    networks:
+      - ghost-internal
+
+volumes:
+  ghost-content:
+  db-data:
+
+networks:
+  ghost-internal:
+  space-server_web:
+    external: true

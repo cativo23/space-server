@@ -1,0 +1,26 @@
+name: nightwire-docs
+
+services:
+  app:
+    image: ${DOCKER_USERNAME:-cativo23}/nightwire-docs:latest
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nightwire-docs.rule=Host(`nightwire.cativo.dev`)"
+      - "traefik.http.routers.nightwire-docs.entrypoints=websecure"
+      - "traefik.http.routers.nightwire-docs.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.nightwire-docs.middlewares=security-headers@file"
+      - "traefik.http.services.nightwire-docs.loadbalancer.server.port=80"
+      - "traefik.docker.network=space-server_web"
+    networks:
+      - space-server_web
+
+networks:
+  space-server_web:
+    external: true

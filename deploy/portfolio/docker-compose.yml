@@ -1,0 +1,36 @@
+name: portfolio-prod
+
+services:
+  app:
+    image: ${DOCKER_USERNAME:-cativo23}/portfolio:latest
+    restart: unless-stopped
+    mem_limit: 1g
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=768
+      PORT: 3000
+      NUXT_API_BASE_URL: ${NUXT_API_BASE_URL:?NUXT_API_BASE_URL is required}
+      NUXT_API_BASE_PATH: ${NUXT_API_BASE_PATH:?NUXT_API_BASE_PATH is required}
+      NUXT_API_TOKEN: ${NUXT_API_TOKEN:?NUXT_API_TOKEN is required}
+      NUXT_GITHUB_TOKEN: ${POW_GH_TOKEN:?POW_GH_TOKEN is required}
+      NUXT_SPOTIFY_CLIENT_ID: ${NUXT_SPOTIFY_CLIENT_ID:-}
+      NUXT_SPOTIFY_CLIENT_SECRET: ${NUXT_SPOTIFY_CLIENT_SECRET:-}
+      NUXT_SPOTIFY_REFRESH_TOKEN: ${NUXT_SPOTIFY_REFRESH_TOKEN:-}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "--tries=1", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portfolio.rule=Host(`cativo.dev`)"
+      - "traefik.http.routers.portfolio.entrypoints=websecure"
+      - "traefik.http.routers.portfolio.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.portfolio.middlewares=security-headers@file"
+      - "traefik.http.services.portfolio.loadbalancer.server.port=3000"
+    networks:
+      - space-server_web
+networks:
+  space-server_web:
+    external: true

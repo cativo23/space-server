@@ -1,0 +1,2 @@
+# Per-host secrets — never commit
+**/.env
