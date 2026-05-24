@@ -32,7 +32,7 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 - [ ] **F7. Network segmentation.** Single `web` network mixes edge, monitoring, app data. Split into `edge` (Traefik only public-facing), `apps`, `mail`, `monitoring`. Backend DBs (Ghost MySQL, portfolio MySQL/Redis) should never touch `edge`.
 - [ ] **F8. DNS-01 challenge.** `traefik.yml` uses `tlsChallenge` — fine for explicit hostnames, blocks wildcards. Switch to `dnsChallenge` with Hetzner DNS provider plugin if we ever want `*.cativo.dev`.
 - [x] **F13. Trim `dockerproxy` permissions.** Dropped `SWARM=1`, `TASKS=1`, `SERVICES=1` from the docker-socket-proxy env — not relevant outside Swarm mode. Smaller attack surface for Traefik's docker-provider discovery.
-- [ ] **F14. Don't hardcode host paths in compose.** `mail-server/docker-compose.yml:22` references `/home/cativo23/space-server/traefik/letsencrypt/acme.json`. Breaks if Ansible deploys under a different user. Use a `${TRAEFIK_ACME_PATH}` env var with no hardcoded default.
+- [x] **F14. Don't hardcode host paths in compose.** `mail-server/docker-compose.yml` referenced `/home/cativo23/space-server/traefik/letsencrypt/acme.json` as a hardcoded default. Removed the `:-` fallback — now requires `TRAEFIK_ACME_PATH` to be set explicitly in `.env`. Added to `.env.example`. Polaris2 `.env` must be updated before next mail-server recreate.
 
 ## P3 — Quality of life
 
@@ -41,7 +41,7 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 - [x] **F9.** Added `depends_on: prometheus` to grafana so startup order is deterministic.
 - [x] **F10.** Prometheus retention set to 30d via `--storage.tsdb.retention.time=30d`; persistent volume already in place from F5.
 - [ ] **F12.** Replace Roundcube inline heredoc entrypoint (`mail-server/docker-compose.yml:79-101`) with the existing `roundcube-*.conf.php` files mounted as volumes.
-- [~] **F15.** All image tags pinned to specific versions (prometheus:v3.11.2, grafana:13.0.1, alertmanager:v0.32.1, node-exporter:v1.11.1, dockerproxy:0.4.2, whoami:v1.11.0, mail:15.1.0, roundcube:1.6.15-apache, dozzle:v10.4.1, uptime-kuma:2.2.1; alertmanager-discord pinned by digest since maintainer doesn't tag). Renovate/Watchtower for auto-updates is still pending — recorded as a follow-up in ADR-0002.
+- [x] **F15.** All image tags pinned to specific versions (prometheus:v3.11.2, grafana:13.0.1, alertmanager:v0.32.1, node-exporter:v1.11.1, dockerproxy:0.4.2, mail:15.1.0, roundcube:1.6.15-apache, dozzle:v10.4.1, uptime-kuma:2.2.1; alertmanager-discord pinned by digest since maintainer doesn't tag). All stacks recreated on polaris2 2026-05-24. Renovate/Watchtower for auto-updates deferred — recorded as follow-up in ADR-0002 and F45.
 - [ ] **F16.** SOPS or `age` for encrypted secrets in git (enables real Ansible reproducibility without leaking `.env`).
 
 ## Deferred — tackle last
@@ -51,18 +51,18 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 ## P4 — Security audit findings (2026-05-24)
 
 - [x] **F23. Grafana admin/admin — false positive.** Opus audit flagged `GF_ADMIN_PASSWORD=admin` in `.env`, but the password was already rotated via Grafana UI post-bootstrap. `GF_ADMIN_PASSWORD` only applies on first container creation; after that Grafana persists it in SQLite. Confirmed: `curl -u admin:admin https://grafana.cativo.dev/api/org` returns 401. `.env` value is now a stale artefact — F16 (SOPS) will clean this up structurally.
-- [~] **F24. Port 143 (cleartext IMAP) and 995 (POP3S) published to host, bypassing ufw.** Docker iptables rules override ufw; `ss -tlnp` + external probe confirmed 143 was reachable from the internet despite `ufw deny 143`. Roundcube reaches Dovecot via the internal docker network — no host port needed. Removed `143:143` and `995:995` from `mail-server/docker-compose.yml`. Awaiting `docker compose up -d mail` on polaris2.
-- [~] **F26. fail2ban only jailing sshd; IMAP/SMTP brute-force unrestricted.** `ENABLE_FAIL2BAN=1` added to mail-server environment. Requires `cap_add: NET_ADMIN` (already present). Awaiting recreate with F24.
+- [x] **F24. Port 143 (cleartext IMAP) and 995 (POP3S) published to host, bypassing ufw.** Docker iptables rules override ufw; `ss -tlnp` + external probe confirmed 143 was reachable from the internet despite `ufw deny 143`. Roundcube reaches Dovecot via the internal docker network — no host port needed. Removed `143:143` and `995:995` from `mail-server/docker-compose.yml`. Verified 2026-05-24: mail container HostConfig.PortBindings only shows 25/465/587/993.
+- [x] **F26. fail2ban only jailing sshd; IMAP/SMTP brute-force unrestricted.** `ENABLE_FAIL2BAN=1` added to mail-server environment. `cap_add: NET_ADMIN` already present. Deployed with F24 on polaris2 2026-05-24.
 - [ ] **F27. `.env` files world-readable (mode 0644) + password reuse across services.** `chmod 600` quick-win applied on polaris2. Structural fix is F16 (SOPS). Password reuse (`REDACTED` in portfolio-api and Ghost) should be rotated independently.
 - [ ] **F28. Roundcube webmail has no rate-limit on the public login form.** No Traefik middleware guards `mail.cativo.dev`. Consider adding a Traefik rate-limit middleware or Crowdsec. Low urgency but non-zero attack surface.
 - [~] **F29. Pending kernel reboot (30-day uptime, updates installed 2026-05-23).** `/var/run/reboot-required` present. Schedule reboot during a low-traffic window; all containers have `restart: unless-stopped` or `restart: always` and will come back automatically.
-- [~] **F30. 17/21 containers without mem_limit on 8 GB host.** Added limits to dockerproxy (64m), traefik (256m), prometheus (1g), alertmanager (128m), alertmanager-discord (64m), node-exporter (64m), cadvisor (256m), grafana (512m). Awaiting `docker compose up -d` on polaris2.
-- [~] **F31. cAdvisor using 747 MB RAM / 17% CPU.** Root cause: `--housekeeping_interval=10s` + all metric collectors enabled + `--store_container_labels=true` on 21 containers. Changed `housekeeping_interval` to 30s and added `--disable_metrics=disk,diskIO,tcp,udp,percpu,sched,process,hugetlb,referenced_memory,resctrl,cpu_topology,memory_numa`. Expected footprint: ~100-150 MB. Awaiting recreate.
+- [x] **F30. 17/21 containers without mem_limit on 8 GB host.** Added limits to dockerproxy (64m), traefik (256m), prometheus (1g), alertmanager (128m), alertmanager-discord (64m), node-exporter (64m), cadvisor (256m), grafana (512m). Verified 2026-05-24: limits confirmed active via `docker inspect`.
+- [x] **F31. cAdvisor using 747 MB RAM / 17% CPU.** Root cause: `--housekeeping_interval=10s` + all metric collectors enabled + `--store_container_labels=true` on 21 containers. Changed `housekeeping_interval` to 30s and added `--disable_metrics=disk,diskIO,tcp,udp,percpu,sched,process,hugetlb,referenced_memory,resctrl,cpu_topology,memory_numa`. Verified 2026-05-24: both flags confirmed active in running container args.
 - [ ] **F32. ~3 GB of unused images + 1 dangling volume.** `docker image prune --filter "until=168h"` + `docker volume rm <dangling>`. Safe to run anytime. Frees ~3 GB on a 75 GB disk at 35% utilization.
-- [~] **F34. Healthchecks missing on 10 containers.** Added `healthcheck:` blocks to prometheus, alertmanager, and grafana. Awaiting `docker compose up -d`.
+- [x] **F34. Healthchecks missing on 10 containers.** Added `healthcheck:` blocks to prometheus, alertmanager, and grafana. Verified 2026-05-24: all three show `(healthy)` in `docker ps`.
 - [ ] **F35. Ghost backed by EOL MySQL 5.7** (EOL Oct 2023). Migrate to `mysql:8.0` or `mariadb:10.11`. Requires staging test; plan as a separate phase.
-- [~] **F37. `whoami` service no longer needed.** Removed from `docker-compose.yml`. Awaiting `docker compose up -d` (running container will be stopped).
-- [~] **F43. Grafana provisioning allows UI deletion of provisioned dashboards.** Changed `disableDeletion: false` → `true` in `grafana/provisioning/dashboards/dashboards.yml`. Takes effect on Grafana restart.
+- [x] **F37. `whoami` service no longer needed.** Removed from `docker-compose.yml`. Verified 2026-05-24: no whoami container running on polaris2.
+- [x] **F43. Grafana provisioning allows UI deletion of provisioned dashboards.** Changed `disableDeletion: false` → `true` in `grafana/provisioning/dashboards/dashboards.yml`. Verified 2026-05-24: `disableDeletion: true` confirmed in provisioning file on polaris2; Grafana running healthy.
 
 ## P5 — Ideas and low-priority (2026-05-24)
 
@@ -72,7 +72,7 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 - [ ] **F39. Log persistence (Loki + Promtail)** — already tracked as F6.
 - [ ] **F40. Hetzner Cloud Firewall as defense-in-depth** — ufw is bypassed by Docker iptables rules; a Hetzner-level firewall would drop traffic before it hits the host.
 - [ ] **F41. `DOCKER-USER` iptables chain** — makes ufw effective for container-published ports without Hetzner Firewall. Lower priority if F40 is adopted.
-- [ ] **F42. Three untracked files in `mail-server/`** — `dovecot/auth.conf`, `roundcube-ssl.inc.php`, `README.md`. Either commit or gitignore.
+- [x] **F42. Three untracked files in `mail-server/`** — `dovecot/auth.conf` (not present on polaris2), `roundcube-ssl.inc.php` (stale pre-F19 config, not mounted — gitignored), `README.md` (committed with updated ports table reflecting F24 removal of 143/995).
 - [ ] **F44. No probe for auth-required regression on public dashboards** — a Blackbox or synthetic check that verifies Grafana/Prometheus/Alertmanager still require auth would catch future middleware misconfigs automatically.
 - [ ] **F45. Self-hosted Renovate** — lightweight cron container for automated image-tag PRs (ties into F15's "Watchtower deferred" note).
 

@@ -17,7 +17,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ./docker-mailserver/accounts/postfix-accounts.cf:/tmp/docker-mailserver/postfix-accounts.cf:ro
       - ./docker-mailserver/accounts/dovecot-accounts.cf:/tmp/docker-mailserver/dovecot-accounts.cf:ro
-      - ${TRAEFIK_ACME_PATH:-/home/cativo23/space-server/traefik/letsencrypt/acme.json}:/etc/letsencrypt/acme.json:ro
+      - ${TRAEFIK_ACME_PATH}:/etc/letsencrypt/acme.json:ro
     environment:
       # Hostname is set via the top-level `hostname:` + `domainname:` keys above.
       # (Earlier versions of this file used OVERRIDES_HOSTNAME / OVERRIDES_DOMAINNAME,
