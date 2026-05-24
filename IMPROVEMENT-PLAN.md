@@ -29,7 +29,7 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 
 ## P2 — Hardening
 
-- [ ] **F7. Network segmentation.** Single `web` network mixes edge, monitoring, app data. Split into `edge` (Traefik only public-facing), `apps`, `mail`, `monitoring`. Backend DBs (Ghost MySQL, portfolio MySQL/Redis) should never touch `edge`.
+- [x] **F7. Network segmentation.** Single `web` network mixes edge, monitoring, app data. Split into `edge` (Traefik only public-facing), `apps`, `mail`, `monitoring`. Backend DBs (Ghost MySQL, portfolio MySQL/Redis) should never touch `edge`.
 - [ ] **F8. DNS-01 challenge.** `traefik.yml` uses `tlsChallenge` — fine for explicit hostnames, blocks wildcards. Switch to `dnsChallenge` with Hetzner DNS provider plugin if we ever want `*.cativo.dev`.
 - [x] **F13. Trim `dockerproxy` permissions.** Dropped `SWARM=1`, `TASKS=1`, `SERVICES=1` from the docker-socket-proxy env — not relevant outside Swarm mode. Smaller attack surface for Traefik's docker-provider discovery.
 - [x] **F14. Don't hardcode host paths in compose.** `mail-server/docker-compose.yml` referenced `/home/cativo23/space-server/traefik/letsencrypt/acme.json` as a hardcoded default. Removed the `:-` fallback — now requires `TRAEFIK_ACME_PATH` to be set explicitly in `.env`. Added to `.env.example`. Polaris2 `.env` must be updated before next mail-server recreate.
