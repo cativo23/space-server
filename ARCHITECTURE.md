@@ -54,7 +54,7 @@ graph TB
     end
 
     Internet -.->|"80/443"| Traefik
-    Internet -.->|"25/465/587/993<br/>SMTP/IMAPS"| Mail
+    Internet -.->|"25/465/587/993<br/>SMTP/IMAPS/Submission"| Mail
     Traefik -->|"tcp:2375"| DProxy
     Traefik --> Ghost & PFront & PAPI & Mail & Webmail & HKitty & Graf & Prom & AM & Kuma & Doz
     Ghost --> GhostDB
@@ -70,7 +70,6 @@ graph TB
     Doz -->|"tcp:2375"| DProxy
 ```
 
-> Test/demo containers (e.g. `whoami`) are intentionally excluded from the diagram.
 
 ---
 
@@ -106,12 +105,16 @@ Traefik's `docker-provider` discovers routes from container labels via the `dock
 ```
 Sender's MTA  →  port 25  →  docker-mailserver
                               ├─ SpamAssassin
+                              ├─ fail2ban (SMTP/IMAP brute-force protection)
                               ├─ Postfix (queue)
                               └─ Dovecot (LMTP → Maildir)
                                   └─ /var/mail/cativo.dev/cativo/{cur,new}
 ```
 
 The mail volume (`mail-data`) is the canonical inbox storage. Traefik is not in this path.
+Exposed ports: 25 (SMTP), 465 (SMTPS), 587 (Submission/STARTTLS), 993 (IMAPS).
+Ports 143 (cleartext IMAP) and 995 (POP3S) are not published — Roundcube reaches
+Dovecot over the internal docker network directly.
 
 ### 3. Outbound mail (replying from webmail)
 
@@ -201,8 +204,10 @@ Nothing sensitive is in the repo. All credentials live in `~/space-server/.env` 
 | Resend API key | `mail-server/.env` `RELAY_PASSWORD` | Postfix sasl_passwd |
 | Discord webhook URL | `.env` `DISCORD_WEBHOOK` | alertmanager-discord adapter |
 | Mail account hashes | `mail-server/docker-mailserver/accounts/{postfix,dovecot}-accounts.cf` (gitignored) | docker-mailserver |
-| Grafana admin password | Grafana SQLite (set on first start via `GF_ADMIN_PASSWORD`, then DB-persisted) | Grafana |
+| Grafana admin password | Grafana SQLite (changed post-bootstrap via UI; `GF_ADMIN_PASSWORD` in `.env` only sets the initial value on first start) | Grafana |
 | Let's Encrypt account key + certs | `traefik/letsencrypt/acme.json` (mode 600) | Traefik certResolver |
+
+All `.env` files on polaris2 are mode `0600`. The long-term goal (F16) is to replace them with SOPS/age-encrypted files committed to git, enabling full Ansible reproducibility.
 
 The original `auth.yml` apr1 hash was committed publicly for ~3 weeks before being caught; it has since been rotated to bcrypt and the file removed from tracking. The historical hash is invalidated.
 

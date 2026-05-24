@@ -48,6 +48,34 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 
 - [ ] **F4. Automated backups.** Deferred 2026-05-14 at Carlos' request — wants to land observability and hardening first. `scripts/` are one-shot migration tools, no recurring backup. When picked up: `restic` (encrypted, dedup'd) → Hetzner Storage Box (~€4/mo). Targets: mail-data, ghost volumes, grafana-data, uptime-kuma-data, portfolio-api MySQL/Redis, cliproxy postgres, traefik/letsencrypt. Daily cron + monthly restore test. **Caveat:** this is still the single biggest catastrophic-loss exposure; don't let it slip forever.
 
+## P4 — Security audit findings (2026-05-24)
+
+- [x] **F23. Grafana admin/admin — false positive.** Opus audit flagged `GF_ADMIN_PASSWORD=admin` in `.env`, but the password was already rotated via Grafana UI post-bootstrap. `GF_ADMIN_PASSWORD` only applies on first container creation; after that Grafana persists it in SQLite. Confirmed: `curl -u admin:admin https://grafana.cativo.dev/api/org` returns 401. `.env` value is now a stale artefact — F16 (SOPS) will clean this up structurally.
+- [~] **F24. Port 143 (cleartext IMAP) and 995 (POP3S) published to host, bypassing ufw.** Docker iptables rules override ufw; `ss -tlnp` + external probe confirmed 143 was reachable from the internet despite `ufw deny 143`. Roundcube reaches Dovecot via the internal docker network — no host port needed. Removed `143:143` and `995:995` from `mail-server/docker-compose.yml`. Awaiting `docker compose up -d mail` on polaris2.
+- [~] **F26. fail2ban only jailing sshd; IMAP/SMTP brute-force unrestricted.** `ENABLE_FAIL2BAN=1` added to mail-server environment. Requires `cap_add: NET_ADMIN` (already present). Awaiting recreate with F24.
+- [ ] **F27. `.env` files world-readable (mode 0644) + password reuse across services.** `chmod 600` quick-win applied on polaris2. Structural fix is F16 (SOPS). Password reuse (`REDACTED` in portfolio-api and Ghost) should be rotated independently.
+- [ ] **F28. Roundcube webmail has no rate-limit on the public login form.** No Traefik middleware guards `mail.cativo.dev`. Consider adding a Traefik rate-limit middleware or Crowdsec. Low urgency but non-zero attack surface.
+- [~] **F29. Pending kernel reboot (30-day uptime, updates installed 2026-05-23).** `/var/run/reboot-required` present. Schedule reboot during a low-traffic window; all containers have `restart: unless-stopped` or `restart: always` and will come back automatically.
+- [~] **F30. 17/21 containers without mem_limit on 8 GB host.** Added limits to dockerproxy (64m), traefik (256m), prometheus (1g), alertmanager (128m), alertmanager-discord (64m), node-exporter (64m), cadvisor (256m), grafana (512m). Awaiting `docker compose up -d` on polaris2.
+- [~] **F31. cAdvisor using 747 MB RAM / 17% CPU.** Root cause: `--housekeeping_interval=10s` + all metric collectors enabled + `--store_container_labels=true` on 21 containers. Changed `housekeeping_interval` to 30s and added `--disable_metrics=disk,diskIO,tcp,udp,percpu,sched,process,hugetlb,referenced_memory,resctrl,cpu_topology,memory_numa`. Expected footprint: ~100-150 MB. Awaiting recreate.
+- [ ] **F32. ~3 GB of unused images + 1 dangling volume.** `docker image prune --filter "until=168h"` + `docker volume rm <dangling>`. Safe to run anytime. Frees ~3 GB on a 75 GB disk at 35% utilization.
+- [~] **F34. Healthchecks missing on 10 containers.** Added `healthcheck:` blocks to prometheus, alertmanager, and grafana. Awaiting `docker compose up -d`.
+- [ ] **F35. Ghost backed by EOL MySQL 5.7** (EOL Oct 2023). Migrate to `mysql:8.0` or `mariadb:10.11`. Requires staging test; plan as a separate phase.
+- [~] **F37. `whoami` service no longer needed.** Removed from `docker-compose.yml`. Awaiting `docker compose up -d` (running container will be stopped).
+- [~] **F43. Grafana provisioning allows UI deletion of provisioned dashboards.** Changed `disableDeletion: false` → `true` in `grafana/provisioning/dashboards/dashboards.yml`. Takes effect on Grafana restart.
+
+## P5 — Ideas and low-priority (2026-05-24)
+
+- [ ] **F38. alertmanager-discord pinned by digest blocks Renovate** — tag once benjojo releases a versioned tag, or fork into a personal registry.
+- [ ] **F33. portfolio-api Docker image is 2.41 GB** — likely single-stage build with dev deps. Audit Dockerfile in source repo.
+- [ ] **F36. `~/deploy/` zone has no git repo** — already tracked as F3.
+- [ ] **F39. Log persistence (Loki + Promtail)** — already tracked as F6.
+- [ ] **F40. Hetzner Cloud Firewall as defense-in-depth** — ufw is bypassed by Docker iptables rules; a Hetzner-level firewall would drop traffic before it hits the host.
+- [ ] **F41. `DOCKER-USER` iptables chain** — makes ufw effective for container-published ports without Hetzner Firewall. Lower priority if F40 is adopted.
+- [ ] **F42. Three untracked files in `mail-server/`** — `dovecot/auth.conf`, `roundcube-ssl.inc.php`, `README.md`. Either commit or gitignore.
+- [ ] **F44. No probe for auth-required regression on public dashboards** — a Blackbox or synthetic check that verifies Grafana/Prometheus/Alertmanager still require auth would catch future middleware misconfigs automatically.
+- [ ] **F45. Self-hosted Renovate** — lightweight cron container for automated image-tag PRs (ties into F15's "Watchtower deferred" note).
+
 ## Notes for future sessions
 
 - Carlos has stated: "Docker Compose is enough — no Kubernetes." Don't propose k8s.

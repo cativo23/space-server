@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — security hardening and resource optimization (2026-05-24)
+
+- `ENABLE_FAIL2BAN=1` on mail container — protects SMTP/IMAP endpoints against brute-force (F26)
+- `mem_limit` on all major containers: dockerproxy (64m), traefik (256m), prometheus (1g), alertmanager (128m), alertmanager-discord (64m), node-exporter (64m), cadvisor (256m), grafana (512m) — prevents runaway container from OOM-killing the host (F30)
+- Healthchecks on prometheus (`/-/ready`), alertmanager (`/-/ready`), and grafana (`/api/health`) — enables Docker to detect hung processes, not just missing containers (F34)
+- `disableDeletion: true` in Grafana dashboard provisioning — prevents accidental UI deletion of provisioned dashboards (F43)
+
+### Changed
+
+- cAdvisor `housekeeping_interval` raised from 10s to 30s; added `--disable_metrics` for unused collectors (disk, diskIO, tcp, udp, percpu, sched, process, hugetlb, etc.) — expected to cut RAM from ~747 MB to ~150 MB (F31)
+- Grafana admin password note updated in ARCHITECTURE.md — `GF_ADMIN_PASSWORD` only sets the initial value; subsequent changes are DB-persisted and the `.env` value is a stale artefact (F23)
+
+### Removed
+
+- `whoami` service removed from root `docker-compose.yml` — was only used for Traefik discovery testing; reduces public attack surface (F37)
+- Ports `143` (cleartext IMAP) and `995` (POP3S) removed from mail-server host port bindings — Roundcube reaches Dovecot via the internal docker network; Docker was bypassing ufw for these ports (F24)
+
 ### Added — observability and reliability
 
 - Prometheus + Alertmanager + node_exporter + cAdvisor stack, with 8 alert rules across host (disk >85%/95%, memory >90%, load > 2× CPU count), containers (restart loop, missing), TLS (cert <14d), and scrape-up

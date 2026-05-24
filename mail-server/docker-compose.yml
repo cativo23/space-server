@@ -9,8 +9,6 @@ services:
       - "465:465"    # SMTPS (implicit TLS)
       - "587:587"    # Submission (STARTTLS)
       - "993:993"    # IMAPS
-      - "995:995"    # POP3S (optional)
-      - "143:143"    # IMAP (optional, for testing)
     volumes:
       - mail-data:/var/mail
       - mail-state:/var/mail-state
@@ -28,6 +26,7 @@ services:
       # Security
       - ONE_DIR=1
       - PERMIT_DOCKER=network
+      - ENABLE_FAIL2BAN=1
 
       # SSL/TLS configuration for Traefik
       - SSL_TYPE=letsencrypt
