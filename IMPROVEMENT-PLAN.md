@@ -70,7 +70,7 @@ Tracks architecture review findings and the order we tackle them. Findings are r
 - [ ] **F33. portfolio-api Docker image is 2.41 GB** — likely single-stage build with dev deps. Audit Dockerfile in source repo.
 - [ ] **F36. `~/deploy/` zone has no git repo** — already tracked as F3.
 - [ ] **F39. Log persistence (Loki + Promtail)** — already tracked as F6.
-- [ ] **F40. Hetzner Cloud Firewall as defense-in-depth** — ufw is bypassed by Docker iptables rules; a Hetzner-level firewall would drop traffic before it hits the host.
+- [x] **F40. Hetzner Cloud Firewall as defense-in-depth** — ufw is bypassed by Docker iptables rules; a Hetzner-level firewall would drop traffic before it hits the host. Runbook written at `docs/runbooks/hetzner-firewall.md` (2026-05-24): exact inbound rules (SSH/52222, 80, 443, 25, 465, 587, 993), verification commands, and hcloud CLI one-liner. Actual console application requires Carlos — delegated browser/API access not granted.
 - [ ] **F41. `DOCKER-USER` iptables chain** — makes ufw effective for container-published ports without Hetzner Firewall. Lower priority if F40 is adopted.
 - [x] **F42. Three untracked files in `mail-server/`** — `dovecot/auth.conf` (not present on polaris2), `roundcube-ssl.inc.php` (stale pre-F19 config, not mounted — gitignored), `README.md` (committed with updated ports table reflecting F24 removal of 143/995).
 - [ ] **F44. No probe for auth-required regression on public dashboards** — a Blackbox or synthetic check that verifies Grafana/Prometheus/Alertmanager still require auth would catch future middleware misconfigs automatically.
