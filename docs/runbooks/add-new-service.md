@@ -30,7 +30,7 @@ services:
       - "traefik.http.routers.thingy.rule=Host(`thingy.cativo.dev`)"
       - "traefik.http.routers.thingy.entrypoints=websecure"
       - "traefik.http.routers.thingy.tls.certresolver=letsencryptresolver"
-      - "traefik.http.routers.thingy.middlewares=security-headers@file"   # add auth@file too for internal
+      - "traefik.http.routers.thingy.middlewares=internal-only@file,security-headers@file"   # internal/admin UI: VPN-gate it (see admin-vpn.md); add auth@file too if you want a 2nd factor
       - "traefik.http.services.thingy.loadbalancer.server.port=3000"
     networks:
       - space-server_web             # web exposure

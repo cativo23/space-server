@@ -85,6 +85,21 @@ Three Docker networks segment trust:
 
 The two `*_internal` networks have no path to the internet and no path from Traefik. **Database containers don't carry the `web` network attachment at all** — even if Traefik were compromised, Ghost's MySQL and the portfolio's MariaDB/Redis are unreachable. This is the partial network segmentation called out in `IMPROVEMENT-PLAN.md` F7; full segmentation would split `space-server_web` further into `edge`/`apps`/`mail`/`monitoring`.
 
+### Admin VPN (F47)
+
+The admin/observability UIs are **not reachable from the public internet**. A WireGuard
+tunnel (`wg0` = `10.10.0.1/24`, UDP `51820`) terminates on polaris2, and a Traefik
+`internal-only` `ipAllowList` middleware (`sourceRange: 10.10.0.0/24`) is the first
+middleware on every admin router — **traefik-dashboard, prometheus, alertmanager,
+grafana, uptime, dozzle, mail (webmail)**. A request from outside the VPN subnet gets a
+clean `403` before any auth or service is reached; a VPN client passes through to the
+service (and its own auth, where present). The public apps (`cativo.dev`, `api`, `blog`,
+`devi`, `status`) carry no allowlist and stay open. Mail transport (SMTP/IMAP `25/465/587/993`)
+is unaffected — only the webmail HTTP UI is gated. Clients resolve the admin hostnames to
+`10.10.0.1` via split-DNS (`/etc/hosts`); Traefik routes by Host header so the Let's Encrypt
+certs stay valid. SSH (`:52222`) is the out-of-band recovery path. See
+`docs/runbooks/admin-vpn.md`. WireGuard keys live only in `/etc/wireguard/` on the box.
+
 ---
 
 ## Request flows
@@ -93,6 +108,7 @@ The two `*_internal` networks have no path to the internet and no path from Trae
 
 ```
 Browser  →  Hetzner :443  →  Traefik (TLS termination)
+                              ├─ internal-only ipAllowList (admin routers — VPN subnet 10.10.0.0/24, else 403)
                               ├─ HSTS / CSP / X-Frame-Options via security-headers middleware
                               ├─ basic auth via auth@file middleware (internal sites only)
                               └─ HTTP forward → service container :PORT

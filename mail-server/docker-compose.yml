@@ -94,7 +94,7 @@ services:
       - "traefik.http.routers.mail.rule=Host(`mail.${MAIL_DOMAIN}`)"
       - "traefik.http.routers.mail.entrypoints=websecure"
       - "traefik.http.routers.mail.tls.certresolver=letsencryptresolver"
-      - "traefik.http.routers.mail.middlewares=mail-ratelimit@file,mail-headers@file"
+      - "traefik.http.routers.mail.middlewares=internal-only@file,mail-ratelimit@file,mail-headers@file"
       - "traefik.http.services.mail.loadbalancer.server.port=80"
     depends_on:
       - mail

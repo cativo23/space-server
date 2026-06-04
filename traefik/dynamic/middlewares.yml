@@ -5,3 +5,10 @@ http:
         average: 10
         burst: 20
         period: 1m
+
+    # Admin VPN gate — only the WireGuard subnet (10.10.0.0/24) may reach
+    # internal UIs. Public visitors get 403. status.cativo.dev stays public.
+    internal-only:
+      ipAllowList:
+        sourceRange:
+          - 10.10.0.0/24

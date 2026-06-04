@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — admin VPN (WireGuard + Traefik allowlist) (2026-06-04)
+
+- **WireGuard admin VPN on polaris2 (F47).** Installed `wireguard`; `wg0` = `10.10.0.1/24` on UDP `51820`, services-only tunnel (no NAT/full-tunnel), `wg-quick@wg0` enabled on boot, ufw opened for `51820/udp`. Keys + `wg0.conf` live in `/etc/wireguard/` (root, 0600) — **never in git**.
+- **`internal-only` Traefik middleware** (`traefik/dynamic/middlewares.yml`) — `ipAllowList` with `sourceRange: 10.10.0.0/24`, prepended (first in chain → blocked requests get a clean `403`, no auth-prompt leak) to the `.middlewares=` label of every admin router: traefik-dashboard, prometheus, alertmanager, grafana, uptime, dozzle, mail (webmail). Public visitors now get `403`; the VPN subnet passes through to the service (and its own auth, where present).
+- Client reaches the admin UIs by **split-DNS** (`/etc/hosts` → `10.10.0.1`); Traefik routes by Host header so the Let's Encrypt certs stay valid and it sees the real `10.10.0.x` source IP. See `docs/runbooks/admin-vpn.md`.
+
+### Changed
+
+- **Uptime Kuma monitors repointed to internal endpoints (F47).** The 7 monitors for now-VPN-gated routers (mail, grafana, prometheus, alertmanager, dozzle, uptime, traefik) previously hit the public URLs and would have flagged `403`/down. Repointed to `http://<container>:<port>` health endpoints on `space-server_web` (e.g. `grafana:3000/api/health`, `prometheus:9090/-/healthy`, `traefik:8081/ping`) — they now verify real service health instead of the proxy's gate. Supersedes the "accept 401 as Up" approach from F22 for these routers.
+
 ### Added — security hardening and resource optimization (2026-05-24)
 
 - `ENABLE_FAIL2BAN=1` on mail container — protects SMTP/IMAP endpoints against brute-force (F26)
