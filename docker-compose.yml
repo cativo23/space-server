@@ -69,6 +69,9 @@ services:
       - "traefik.http.routers.prometheus.tls.certresolver=letsencryptresolver"
       - "traefik.http.routers.prometheus.middlewares=auth@file,security-headers@file"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      # Dual-homed (web + monitoring): pin Traefik to the web IP, else it may
+      # pick the monitoring IP it can't reach → 504 (F7 regression).
+      - "traefik.docker.network=space-server_web"
     networks:
       - web
       - monitoring
@@ -97,6 +100,8 @@ services:
       - "traefik.http.routers.alertmanager.tls.certresolver=letsencryptresolver"
       - "traefik.http.routers.alertmanager.middlewares=auth@file,security-headers@file"
       - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
+      # Dual-homed (web + monitoring): pin Traefik to the web IP (F7 regression).
+      - "traefik.docker.network=space-server_web"
     networks:
       - web
       - monitoring
@@ -185,6 +190,9 @@ services:
       - "traefik.http.routers.grafana.tls.certresolver=letsencryptresolver"
       - "traefik.http.routers.grafana.middlewares=security-headers@file"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      # Dual-homed (web + monitoring): pin Traefik to the web IP, else it may
+      # pick the monitoring IP it can't reach → 504 (F7 regression).
+      - "traefik.docker.network=space-server_web"
     networks:
       - web
       - monitoring
