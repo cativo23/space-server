@@ -8,6 +8,7 @@ traefik/dynamic/auth.yml
 mail-server/docker-mailserver/accounts/postfix-accounts.cf
 mail-server/docker-mailserver/accounts/dovecot-accounts.cf
 mail-server/roundcube-ssl.inc.php
+.credentials.md
 
 # Defensive: any plaintext credential dump
 space-server-credentials.txt
