@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — docs (2026-07-16)
+
+- **ADR-0004 — live infra signal via the docker-socket-proxy.** Records the decision to source the portfolio's public container/stack counts from the existing read-only `dockerproxy` (`/containers/json` list only) rather than Prometheus/cAdvisor, and why the backend (`portfolio-api`) — already co-networked on `space-server_web` — hosts the query. No infra change in this repo; documentation only.
+
 ### Added — admin VPN (WireGuard + Traefik allowlist) (2026-06-04)
 
 - **WireGuard admin VPN on polaris2 (F47).** Installed `wireguard`; `wg0` = `10.10.0.1/24` on UDP `51820`, services-only tunnel (no NAT/full-tunnel), `wg-quick@wg0` enabled on boot, ufw opened for `51820/udp`. Keys + `wg0.conf` live in `/etc/wireguard/` (root, 0600) — **never in git**.

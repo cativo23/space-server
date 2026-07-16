@@ -20,6 +20,7 @@ Format: lightweight [Michael Nygard ADR](https://cognitect.com/blog/2011/11/15/d
 | [0001](0001-single-source-of-truth.md) | Repository as single source of truth for infrastructure | accepted |
 | [0002](0002-observability-before-features.md) | Adopt observability before scaling features | accepted |
 | [0003](0003-smtp-relay-via-resend.md) | Route outbound mail through Resend SMTP relay | accepted |
+| [0004](0004-live-infra-signal-via-docker-socket-proxy.md) | Live container/stack counts via the docker-socket-proxy | accepted |
 
 ## Adding a new ADR
 
