@@ -6,7 +6,8 @@ The admin/observability UIs are **not on the public internet**. They are gated b
 - **Server:** `wg0` = `10.10.0.1/24`, UDP `51820`, on polaris2. Services-only tunnel (no
   full-tunnel / no NAT). `wg-quick@wg0` is enabled (survives reboot). ufw allows `51820/udp`.
 - **Gated routers:** `traefik-dashboard`, `prometheus`, `alertmanager`, `grafana`, `uptime`,
-  `dozzle`, `mail` (webmail). **Not gated:** `cativo.dev`, `api`, `blog`, `devi`, `status`.
+  `dozzle`, `mail` (webmail), `umami` (analytics). **Not gated:** `cativo.dev`, `api`, `blog`,
+  `devi`, `status`.
 - **Not affected:** mail transport (SMTP/IMAP `25/465/587/993`) stays public — only the
   webmail HTTP UI is behind the VPN.
 - **Recovery:** SSH (`cativo23@167.235.52.161:52222`) is out-of-band and never gated.

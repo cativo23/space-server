@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — self-hosted analytics (Umami) (2026-07-16)
+
+- **Umami analytics stack (F48).** New `umami/` stack: Umami v3 (`umami`, pinned by digest) + a dedicated `postgres:16-alpine` (`umami-db`). Dashboard at `analytics.cativo.dev`, VPN-gated via `internal-only@file` like the other admin UIs (off-VPN → `403`). The DB is on a private `umami-db-net` bridge — **not** on `space-server_web`; the app is on both (web for Traefik + the portfolio same-origin proxy, db-net for Postgres). Postgres data at `/mnt/hdd/umami/pgdata`, UTC. Secrets in `umami/.env` (gitignored). See `docs/runbooks/umami-analytics.md`.
+- The public site loads the tracker **same-origin** — the portfolio Nitro server proxies the tracker script + event collector through `cativo.dev` to the internal `umami:3000`, so the tracker host is never public and the site's strict CSP (`connect-src 'self'`) is unchanged. `analytics.cativo.dev` therefore serves only the (VPN-gated) dashboard.
+
 ### Added — docs (2026-07-16)
 
 - **ADR-0004 — live infra signal via the docker-socket-proxy.** Records the decision to source the portfolio's public container/stack counts from the existing read-only `dockerproxy` (`/containers/json` list only) rather than Prometheus/cAdvisor, and why the backend (`portfolio-api`) — already co-networked on `space-server_web` — hosts the query. No infra change in this repo; documentation only.

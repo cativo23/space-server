@@ -1,0 +1,67 @@
+name: umami
+
+# Self-hosted, privacy-focused analytics for cativo.dev (Umami v3).
+# Dashboard is VPN-gated (internal-only@file) like the other admin UIs.
+# The public site loads the tracker SAME-ORIGIN (proxied through cativo.dev by
+# the portfolio Nitro server), so this stack never needs a public tracker host
+# and the site's strict CSP stays `connect-src 'self'`. The app is reachable
+# from the portfolio container as http://umami:3000 over space-server_web.
+
+services:
+  umami:
+    # Umami publishes only rolling `postgresql-latest`; pinned by digest for
+    # reproducibility (currently v3.2.0, 2026-06-24).
+    image: docker.umami.is/umami-software/umami:postgresql-latest@sha256:8edfe4beaef13f9d1300619fa264ef250a3688df9cc54d24ca830ca31cb475ec
+    container_name: umami
+    restart: unless-stopped
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    environment:
+      DATABASE_TYPE: postgresql
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:?UMAMI_DB_PASSWORD is required}@umami-db:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET:?UMAMI_APP_SECRET is required}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/heartbeat || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.umami.rule=Host(`analytics.cativo.dev`)"
+      - "traefik.http.routers.umami.entrypoints=websecure"
+      - "traefik.http.routers.umami.tls.certresolver=letsencryptresolver"
+      # VPN-only dashboard: internal-only FIRST (clean 403 for public), then headers.
+      - "traefik.http.routers.umami.middlewares=internal-only@file,security-headers@file"
+      - "traefik.http.services.umami.loadbalancer.server.port=3000"
+    networks:
+      - space-server_web   # Traefik + same-origin proxy from the portfolio app
+      - umami-db-net        # reach the database
+
+  umami-db:
+    image: postgres:16-alpine
+    container_name: umami-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:?UMAMI_DB_PASSWORD is required}
+      # Umami docs: run Postgres in UTC for consistent timestamps.
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - /mnt/hdd/umami/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - umami-db-net        # DB stays OFF the shared web network
+
+networks:
+  space-server_web:
+    external: true
+  umami-db-net:
+    driver: bridge
