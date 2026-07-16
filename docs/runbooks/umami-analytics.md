@@ -12,7 +12,8 @@ Self-hosted, privacy-focused web analytics for `cativo.dev`. Stack lives in `uma
 - **Containers:** `umami` (app, Umami v3, pinned by digest) + `umami-db` (`postgres:16-alpine`).
   The DB is on a private `umami-db-net` bridge — **not** on `space-server_web`. The app is on both
   (web for Traefik + the portfolio proxy; db-net to reach Postgres).
-- **Data:** Postgres volume at `/mnt/hdd/umami/pgdata`. Postgres runs in UTC.
+- **Data:** Docker named volume `umami-pgdata` (postgres-alpine is uid 70; a named volume lets
+  Docker own it automatically — a root-owned `/mnt/hdd` bind would fail `initdb`). Postgres runs in UTC.
 
 ## Secrets
 
@@ -24,7 +25,7 @@ Self-hosted, privacy-focused web analytics for `cativo.dev`. Stack lives in `uma
 ```bash
 cd ~/space-server && git pull
 cd umami
-# first time: cp .env.example .env && fill in secrets; mkdir -p /mnt/hdd/umami/pgdata
+# first time: cp .env.example .env && fill in secrets  (postgres volume is auto-created)
 docker compose up -d
 docker compose ps          # both healthy
 curl -f http://localhost:3000/api/heartbeat   # from inside the umami netns, or via `docker exec umami`
