@@ -17,6 +17,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ./docker-mailserver/accounts/postfix-accounts.cf:/tmp/docker-mailserver/postfix-accounts.cf:ro
       - ./docker-mailserver/accounts/dovecot-accounts.cf:/tmp/docker-mailserver/dovecot-accounts.cf:ro
+      - ./docker-mailserver/dovecot/auth.conf:/etc/dovecot/conf.d/zz-disable-plaintext.conf:ro
       - ${TRAEFIK_ACME_PATH}:/etc/letsencrypt/acme.json:ro
     environment:
       # Hostname is set via the top-level `hostname:` + `domainname:` keys above.
@@ -35,7 +36,8 @@ services:
       - ENABLE_SPAMASSASSIN=1
       - SPAMASSASSIN_SPAM_TO_INBOX=1
 
-      # Dovecot
+      # Dovecot - disable plaintext auth (BSI security requirement)
+      - DOVECOT_DISABLE_PLAINTEXT_AUTH=yes
       - ENABLE_MANAGESIEVE=1
 
       # Postfix
