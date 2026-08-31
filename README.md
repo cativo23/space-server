@@ -34,8 +34,8 @@ This repo is the source of truth for that infrastructure — every service, ever
 
 | URL | Service |
 |---|---|
-| [cativo.dev](https://cativo.dev) | Portfolio (React) |
-| [api.cativo.dev](https://api.cativo.dev) | Portfolio API (Laravel) |
+| [cativo.dev](https://cativo.dev) | Portfolio (Nuxt 4) |
+| [api.cativo.dev](https://api.cativo.dev) | Portfolio API (NestJS) |
 | [blog.cativo.dev](https://blog.cativo.dev) | Ghost 5 blog |
 | [mail.cativo.dev](https://mail.cativo.dev) | Roundcube webmail |
 | `devi.cativo.dev` | Hello Kitty landing |
@@ -54,7 +54,7 @@ Plus SMTP/IMAPS on the standard mail ports.
 |---|---|
 | **Edge** | Traefik v3.6 — automatic Let's Encrypt SSL, basic-auth on internal dashboards, security headers, bcrypt hashes only |
 | **Mail** | docker-mailserver (Postfix + Dovecot + SpamAssassin) with SPF/DKIM/DMARC; Roundcube webmail over STARTTLS; outbound via Resend SMTP relay (Hetzner blocks port 25) |
-| **Apps** | Ghost 5 (MySQL backing it), React + Laravel portfolio (Laravel API has MariaDB + Redis), hello-kitty landing |
+| **Apps** | Ghost 5 (MySQL backing it), Nuxt 4 + NestJS portfolio (the API has MariaDB + Redis), hello-kitty landing |
 | **Observability** | Prometheus (30-day retention), node_exporter, cAdvisor, Alertmanager → Discord webhook (via `alertmanager-discord` adapter), Grafana with provisioned dashboards (Node Exporter Full, Traefik standalone, cAdvisor), Uptime Kuma for external probes, Dozzle for live container logs |
 | **Plumbing** | docker-socket-proxy with minimal API surface (Swarm endpoints disabled), git-on-prod deploy (`git pull && docker compose up -d`) |
 
@@ -79,7 +79,7 @@ graph LR
 
         subgraph Apps[" Apps "]
             Ghost["Ghost 5 + MySQL<br/>blog.cativo.dev"]
-            Portfolio["React + Laravel<br/>cativo.dev"]
+            Portfolio["Nuxt 4 + NestJS<br/>cativo.dev"]
             Mail["docker-mailserver<br/>mail.cativo.dev"]
             Webmail["Roundcube"]
         end
@@ -149,12 +149,14 @@ The [`IMPROVEMENT-PLAN.md`](IMPROVEMENT-PLAN.md) tracks every finding from a str
 - **[IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md)** — Active findings roadmap with status per item
 - **[CHANGELOG.md](CHANGELOG.md)** — Keep-a-Changelog format
 
+**Current uptime:** 3+ weeks on Hetzner VPS (8GB RAM, Intel Xeon)
+
 ## Tech stack
 
 - **Reverse proxy:** Traefik v3.6 (Let's Encrypt, file + docker providers, basic auth + security-headers middleware)
 - **Mail:** docker-mailserver, Roundcube (STARTTLS internal), Resend SMTP relay (outbound)
 - **Monitoring:** Prometheus, Alertmanager, node_exporter, cAdvisor, Grafana with provisioning, alertmanager-discord sidecar
-- **Apps:** Ghost 5, React frontend, Laravel API, MySQL/MariaDB, Redis
+- **Apps:** Ghost 5, Nuxt 4 frontend, NestJS API, MySQL/MariaDB, Redis
 - **Ops:** Docker Compose v2, git-on-prod, Discord alerting
 
 ## Quick start
