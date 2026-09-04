@@ -63,7 +63,11 @@ groups:
     interval: 60s
     rules:
       - alert: TraefikCertExpiringSoon
-        expr: traefik_tls_certs_not_after - time() < 14 * 86400
+        # Traefik never garbage-collects metrics for superseded certs, so old
+        # (already-renewed) serials keep reporting their stale not_after
+        # forever alongside the current one. max by (cn, sans) picks only the
+        # newest cert per hostname so a renewal actually resolves the alert.
+        expr: max by (cn, sans) (traefik_tls_certs_not_after) - time() < 14 * 86400
         for: 10m
         labels:
           severity: warning
