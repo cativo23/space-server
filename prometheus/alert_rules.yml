@@ -69,7 +69,7 @@ groups:
           severity: warning
         annotations:
           summary: "TLS cert for {{ $labels.sans }} expires in <14d"
-          description: "Cert SANs={{ $labels.sans }} expires at {{ $value | humanizeTimestamp }}. Let's Encrypt auto-renews around 30d, so this should self-heal — investigate ACME logs if it doesn't."
+          description: "Cert SANs={{ $labels.sans }} expires in {{ $value | humanizeDuration }}. Let's Encrypt auto-renews around 30d, so this should self-heal — investigate ACME logs if it doesn't."
 
   - name: prometheus
     interval: 60s
