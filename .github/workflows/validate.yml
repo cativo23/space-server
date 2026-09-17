@@ -29,6 +29,10 @@ jobs:
         run: docker compose -f docker-compose.yml config --quiet
 
       - name: validate mail-server compose
+        env:
+          MAIL_DOMAIN: example.com
+          MAIL_ACCOUNTS: ci-dummy@example.com|dummy
+          TRAEFIK_ACME_PATH: /tmp/acme.json
         run: docker compose -f mail-server/docker-compose.yml config --quiet
 
       - name: validate dozzle compose
