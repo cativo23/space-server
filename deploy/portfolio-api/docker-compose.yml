@@ -1,3 +1,5 @@
+name: portfolio-api-deploy
+
 services:
   api:
     image: ${DOCKER_USERNAME:-cativo23}/portfolio-api:latest
