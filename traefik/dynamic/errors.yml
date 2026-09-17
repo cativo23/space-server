@@ -1,12 +1,20 @@
 http:
   middlewares:
-    # Nightwire-styled pages for 404 and upstream-down responses.
-    # Backed by deploy/error-pages (nginx serving deploy/error-pages/pages/*.html).
+    # Nightwire-styled pages for the client/server error codes a backend
+    # can plausibly return. Backed by deploy/error-pages (nginx serving
+    # deploy/error-pages/pages/*.html) — any status without a page falls
+    # back to 404.html (see error-pages/nginx.conf).
     custom-errors:
       errors:
         status:
-          - "404"
-          - "502-504"
+          - "400-401"
+          - "403-405"
+          - "408-410"
+          - "413-415"
+          - "422"
+          - "429"
+          - "431"
+          - "500-505"
         service: error-pages-svc
         query: "/{status}.html"
 

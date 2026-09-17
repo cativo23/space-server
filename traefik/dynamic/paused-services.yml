@@ -1,36 +1,28 @@
 http:
   routers:
-    # Fallback for services stopped on purpose (freeing resources, not an
-    # outage). The Docker provider only creates a router while the
-    # container is up, so with it down no router matches these hosts at
-    # all and Traefik falls back to its own plain-text "404 page not
-    # found" — the errors@file middleware never gets a chance since it
-    # hangs off the (now-absent) docker-provider router.
+    # Catch-all fallback for any Host with no matching router — services
+    # stopped on purpose (freeing resources: hellokitty, umami, ...) as
+    # well as any genuinely unknown/mistyped subdomain. The Docker
+    # provider only creates a router while its container is up, so with
+    # it down, nothing else here matches at all and Traefik would
+    # otherwise show its own plain-text 404 (errors@file never gets a
+    # chance — it hangs off the now-absent docker-provider router).
     #
-    # These routers reproduce that same 404 (Traefik has no other way to
-    # style its own no-router-matched response — you can only shadow it
-    # with a router of your own), just served from the Nightwire page
-    # instead of raw text.
+    # Priority 1 keeps this last in line: a docker-provider Host() rule's
+    # computed priority (proportional to rule length) is always higher,
+    # so the moment a real container comes back up its router wins again
+    # automatically — nothing to update here when pausing/unpausing.
     #
-    # These sit at priority=1, well below the computed priority Traefik
-    # assigns a docker-provider Host() rule (proportional to rule length,
-    # always > 1 in practice) — so the moment the real container comes
-    # back up, its router wins again automatically. Remove the entry here
-    # once a service is back up for good.
-    devi-paused:
-      rule: "Host(`devi.cativo.dev`)"
+    # No certresolver on purpose: TLS termination for a Host that already
+    # has a cert (issued while its real router was active) still uses
+    # that cached cert via SNI regardless of which router ends up serving
+    # the request. Adding a certresolver here would make Traefik attempt
+    # ACME issuance for literally any Host header a client sends — a
+    # cert-issuance/rate-limit abuse vector we don't want on a catch-all.
+    paused-fallback:
+      rule: "HostRegexp(`{host:.+}`)"
       entrypoints:
         - websecure
       service: error-pages-svc
       priority: 1
-      tls:
-        certresolver: letsencryptresolver
-
-    analytics-paused:
-      rule: "Host(`analytics.cativo.dev`)"
-      entrypoints:
-        - websecure
-      service: error-pages-svc
-      priority: 1
-      tls:
-        certresolver: letsencryptresolver
+      tls: {}

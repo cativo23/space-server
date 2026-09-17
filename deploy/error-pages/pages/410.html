@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gone — cativo.dev</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Saira+Extra+Condensed:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#000000;--void-warm:#0a0a0a;
+  --nw-red:#ff6688;--nw-red-dim:#cc4466;--nw-red-fill:rgba(255,102,136,0.15);
+  --nw-cyan:#66ddff;--nw-cyan-dim:#44aacc;--nw-cyan-fill:rgba(102,221,255,0.12);
+  --nw-text:#ffffff;--nw-text-dim:#aaaaaa;--nw-text-faint:rgba(255,255,255,0.06);
+  --font-sys:'JetBrains Mono',monospace;--font-stamp:'Saira Extra Condensed',sans-serif;
+  --accent:var(--nw-cyan);--accent-dim:var(--nw-cyan-dim);--accent-fill:var(--nw-cyan-fill);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  background:var(--void);color:var(--nw-text);font-family:var(--font-sys);
+  font-size:14px;line-height:1.5;display:flex;align-items:center;justify-content:center;padding:24px;
+}
+.panel{width:100%;max-width:420px;background:var(--void-warm);border:1px solid var(--nw-text-faint);}
+.panel-header{
+  display:flex;justify-content:space-between;align-items:center;padding:10px 14px;
+  border-bottom:1px solid var(--accent-dim);font-size:10px;font-weight:700;
+  letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);
+}
+.panel-header .tag{font-size:9px;color:var(--nw-text-dim);display:flex;align-items:center;gap:5px;}
+.led{width:6px;height:6px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 4px var(--accent),0 0 8px var(--accent-fill);animation:pulse 1.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+.body{padding:32px 24px 28px;text-align:center;}
+.code{font-family:var(--font-stamp);font-size:72px;font-weight:700;line-height:1;
+  color:var(--accent);letter-spacing:0.04em;transform:scaleX(0.9);}
+.title{font-size:16px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;
+  margin:14px 0 8px;color:var(--nw-text);}
+.msg{font-size:12px;color:var(--nw-text-dim);max-width:320px;margin:0 auto;}
+.footer{border-top:1px solid var(--nw-text-faint);padding:10px 14px;font-size:9px;
+  color:var(--nw-text-dim);text-transform:uppercase;letter-spacing:0.1em;
+  display:flex;justify-content:space-between;}
+</style>
+</head>
+<body>
+<div class="panel">
+  <div class="panel-header">
+    <span>system // error channel</span>
+    <span class="tag"><span class="led"></span>GONE</span>
+  </div>
+  <div class="body">
+    <div class="code">410</div>
+    <div class="title">Gone</div>
+    <div class="msg">This resource is no longer available.</div>
+  </div>
+  <div class="footer">
+    <span>cativo.dev</span>
+    <span>nightwire // v1</span>
+  </div>
+</div>
+</body>
+</html>
