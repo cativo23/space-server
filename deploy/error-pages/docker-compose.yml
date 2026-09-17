@@ -1,8 +1,13 @@
 name: error-pages
 
-# Static Nightwire-styled error pages served to Traefik's errors middleware
-# (traefik/dynamic/errors.yml). Not routed via Host() — only reachable from
-# Traefik itself, over space-server_web, by container name.
+# Static Nightwire-styled error pages, used two ways:
+#  1. Traefik's errors@file middleware (traefik/dynamic/errors.yml) queries
+#     /{status}.html directly on an up-but-failing container's router.
+#  2. traefik/dynamic/paused-services.yml routes a Host straight here (503)
+#     when the real container is stopped on purpose (no docker router exists
+#     to hang the errors middleware off of).
+# Not routed via Host() itself — only reachable from Traefik, by container
+# name, over space-server_web.
 
 services:
   app:
@@ -11,6 +16,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./pages:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/404.html"]
       interval: 30s

@@ -1,0 +1,31 @@
+http:
+  routers:
+    # Fallback for services stopped on purpose (freeing resources, not an
+    # outage). The Docker provider only creates a router while the
+    # container is up, so with it down no router matches these hosts at
+    # all and Traefik falls back to its own plain-text 404 — the
+    # errors@file middleware never gets a chance since it hangs off the
+    # (now-absent) docker-provider router.
+    #
+    # These sit at priority=1, well below the computed priority Traefik
+    # assigns a docker-provider Host() rule (proportional to rule length,
+    # always > 1 in practice) — so the moment the real container comes
+    # back up, its router wins again automatically. Remove the entry here
+    # once a service is back up for good.
+    devi-paused:
+      rule: "Host(`devi.cativo.dev`)"
+      entrypoints:
+        - websecure
+      service: error-pages-svc
+      priority: 1
+      tls:
+        certresolver: letsencryptresolver
+
+    analytics-paused:
+      rule: "Host(`analytics.cativo.dev`)"
+      entrypoints:
+        - websecure
+      service: error-pages-svc
+      priority: 1
+      tls:
+        certresolver: letsencryptresolver
