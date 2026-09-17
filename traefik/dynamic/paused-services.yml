@@ -3,9 +3,14 @@ http:
     # Fallback for services stopped on purpose (freeing resources, not an
     # outage). The Docker provider only creates a router while the
     # container is up, so with it down no router matches these hosts at
-    # all and Traefik falls back to its own plain-text 404 — the
-    # errors@file middleware never gets a chance since it hangs off the
-    # (now-absent) docker-provider router.
+    # all and Traefik falls back to its own plain-text "404 page not
+    # found" — the errors@file middleware never gets a chance since it
+    # hangs off the (now-absent) docker-provider router.
+    #
+    # These routers reproduce that same 404 (Traefik has no other way to
+    # style its own no-router-matched response — you can only shadow it
+    # with a router of your own), just served from the Nightwire page
+    # instead of raw text.
     #
     # These sit at priority=1, well below the computed priority Traefik
     # assigns a docker-provider Host() rule (proportional to rule length,
