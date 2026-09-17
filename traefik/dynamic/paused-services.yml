@@ -20,7 +20,7 @@ http:
     # ACME issuance for literally any Host header a client sends — a
     # cert-issuance/rate-limit abuse vector we don't want on a catch-all.
     paused-fallback:
-      rule: "HostRegexp(`{host:.+}`)"
+      rule: "HostRegexp(`^.+$`)"
       entrypoints:
         - websecure
       service: error-pages-svc
