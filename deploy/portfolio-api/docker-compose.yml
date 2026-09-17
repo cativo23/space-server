@@ -44,7 +44,7 @@ services:
       - "traefik.http.routers.portfolio-api.tls.certresolver=letsencryptresolver"
       - "traefik.http.services.portfolio-api.loadbalancer.server.port=3000"
       - "traefik.docker.network=space-server_web"
-      - "traefik.http.routers.portfolio-api.middlewares=security-headers@file"
+      - "traefik.http.routers.portfolio-api.middlewares=security-headers@file,custom-errors@file"
 
   mysql:
     image: mariadb:10.11

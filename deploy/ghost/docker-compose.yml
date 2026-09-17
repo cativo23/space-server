@@ -28,6 +28,7 @@ services:
       - "traefik.http.routers.ghost-blog.rule=Host(`blog.cativo.dev`)"
       - "traefik.http.routers.ghost-blog.entrypoints=websecure"
       - "traefik.http.routers.ghost-blog.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.ghost-blog.middlewares=custom-errors@file"
       - "traefik.http.services.ghost-blog.loadbalancer.server.port=2368"
       - "traefik.docker.network=space-server_web"
     networks:

@@ -1,0 +1,17 @@
+http:
+  middlewares:
+    # Nightwire-styled pages for 404 and upstream-down responses.
+    # Backed by deploy/error-pages (nginx serving deploy/error-pages/pages/*.html).
+    custom-errors:
+      errors:
+        status:
+          - "404"
+          - "502-504"
+        service: error-pages-svc
+        query: "/{status}.html"
+
+  services:
+    error-pages-svc:
+      loadBalancer:
+        servers:
+          - url: "http://error-pages:80"

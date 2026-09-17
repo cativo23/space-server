@@ -1,0 +1,24 @@
+name: error-pages
+
+# Static Nightwire-styled error pages served to Traefik's errors middleware
+# (traefik/dynamic/errors.yml). Not routed via Host() — only reachable from
+# Traefik itself, over space-server_web, by container name.
+
+services:
+  app:
+    image: nginx:1.27-alpine
+    container_name: error-pages
+    restart: unless-stopped
+    volumes:
+      - ./pages:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/404.html"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - space-server_web
+
+networks:
+  space-server_web:
+    external: true

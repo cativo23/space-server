@@ -27,7 +27,7 @@ services:
       - "traefik.http.routers.portfolio.rule=Host(`cativo.dev`)"
       - "traefik.http.routers.portfolio.entrypoints=websecure"
       - "traefik.http.routers.portfolio.tls.certresolver=letsencryptresolver"
-      - "traefik.http.routers.portfolio.middlewares=security-headers@file"
+      - "traefik.http.routers.portfolio.middlewares=security-headers@file,custom-errors@file"
       - "traefik.http.services.portfolio.loadbalancer.server.port=3000"
     networks:
       - space-server_web
