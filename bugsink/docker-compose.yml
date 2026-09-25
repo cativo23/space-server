@@ -34,13 +34,14 @@ services:
       # `Host: bugsink:8000` — exactly what another container sends when it
       # posts to the internal DSN below — gets a 400 without this.
       ALLOWED_HOSTS: "errors.cativo.dev,bugsink,localhost,127.0.0.1"
-      # Outbound alert emails via Resend SMTP relay (same account as Ghost,
-      # see deploy/ghost/.env.example — Hetzner blocks outbound port 25, and
-      # Resend's API-key auth is simpler than routing through mail-server).
+      # Outbound alert emails via Resend SMTP relay (same account as Ghost).
+      # Port 587/STARTTLS, not 465/implicit-TLS: Hetzner's outbound firewall
+      # only allows 587 to Resend (verified — 465 and 25 both time out from
+      # this host, 587 connects).
       EMAIL_BACKEND: "django.core.mail.backends.smtp.EmailBackend"
       EMAIL_HOST: "smtp.resend.com"
-      EMAIL_PORT: 465
-      EMAIL_USE_SSL: "true"
+      EMAIL_PORT: 587
+      EMAIL_USE_TLS: "true"
       EMAIL_HOST_USER: "resend"
       EMAIL_HOST_PASSWORD: ${BUGSINK_SMTP_PASS:?BUGSINK_SMTP_PASS is required}
       DEFAULT_FROM_EMAIL: "errors@cativo.dev"
