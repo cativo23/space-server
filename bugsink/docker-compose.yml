@@ -45,11 +45,12 @@ services:
       - "traefik.http.routers.bugsink.rule=Host(`errors.cativo.dev`)"
       - "traefik.http.routers.bugsink.entrypoints=websecure"
       - "traefik.http.routers.bugsink.tls.certresolver=letsencryptresolver"
-      # VPN-only dashboard: custom-errors FIRST so it wraps internal-only and
-      # renders the styled 403 page for external access instead of Traefik's
-      # raw 403. No basicAuth@file on top — Bugsink has its own login, same
-      # as umami.
-      - "traefik.http.routers.bugsink.middlewares=custom-errors@file,internal-only@file,security-headers@file"
+      # VPN-only dashboard: security-headers outermost so it still applies to
+      # the substituted error page; custom-errors wraps internal-only so the
+      # ipAllowList's 403 renders the styled page instead of Traefik's raw
+      # 403. No basicAuth@file on top — Bugsink has its own login, same as
+      # umami.
+      - "traefik.http.routers.bugsink.middlewares=security-headers@file,custom-errors@file,internal-only@file"
       - "traefik.http.services.bugsink.loadbalancer.server.port=8000"
     networks:
       - space-server_web   # Traefik + reachable from other projects' apps
