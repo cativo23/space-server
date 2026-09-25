@@ -32,8 +32,9 @@ services:
       - "traefik.http.routers.umami.rule=Host(`analytics.cativo.dev`)"
       - "traefik.http.routers.umami.entrypoints=websecure"
       - "traefik.http.routers.umami.tls.certresolver=letsencryptresolver"
-      # VPN-only dashboard: internal-only FIRST (clean 403 for public), then headers.
-      - "traefik.http.routers.umami.middlewares=internal-only@file,security-headers@file,custom-errors@file"
+      # VPN-only dashboard: custom-errors FIRST so it wraps internal-only and
+      # renders the styled 403 page for external access instead of Traefik's raw 403.
+      - "traefik.http.routers.umami.middlewares=custom-errors@file,internal-only@file,security-headers@file"
       - "traefik.http.services.umami.loadbalancer.server.port=3000"
     networks:
       - space-server_web   # Traefik + same-origin proxy from the portfolio app
