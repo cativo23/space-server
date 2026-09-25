@@ -50,7 +50,7 @@ services:
       retries: 3
 
   prometheus:
-    image: prom/prometheus:v3.11.2
+    image: prom/prometheus:v3.13.3
     container_name: prometheus
     restart: unless-stopped
     command:
@@ -84,7 +84,7 @@ services:
       start_period: 30s
 
   alertmanager:
-    image: prom/alertmanager:v0.32.1
+    image: prom/alertmanager:v0.34.1
     container_name: alertmanager
     restart: unless-stopped
     command:
@@ -144,7 +144,7 @@ services:
     mem_limit: 64m
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.55.1
+    image: gcr.io/cadvisor/cadvisor:v0.60.6
     container_name: cadvisor
     restart: unless-stopped
     privileged: true
