@@ -39,8 +39,11 @@ certificatesResolvers:
       email: "cativo23.kt@gmail.com"
       storage: "/letsencrypt/acme.json"
       tlsChallenge: {}
-log:
-  level: WARN
 
 ping:
   entryPoint: ping
+
+log:
+  level: WARN
+
+accessLog: {}
