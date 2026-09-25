@@ -1,0 +1,77 @@
+name: bugsink
+
+# Self-hosted, Sentry-protocol-compatible error tracking. Dashboard is
+# VPN-gated (internal-only@file) like the other admin UIs. Reachable from
+# other projects' app containers as http://bugsink:8000 over
+# space-server_web, so a project's Sentry SDK DSN never needs to leave the
+# host network to report an exception — same pattern umami uses for its
+# same-origin tracker calls.
+
+services:
+  bugsink:
+    image: bugsink/bugsink:2
+    container_name: bugsink
+    restart: unless-stopped
+    depends_on:
+      bugsink-db:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: ${BUGSINK_SECRET_KEY:?BUGSINK_SECRET_KEY is required}
+      CREATE_SUPERUSER: ${BUGSINK_ADMIN_EMAIL:?BUGSINK_ADMIN_EMAIL is required}:${BUGSINK_ADMIN_PASSWORD:?BUGSINK_ADMIN_PASSWORD is required}
+      PORT: 8000
+      DATABASE_URL: postgresql://bugsink:${BUGSINK_DB_PASSWORD:?BUGSINK_DB_PASSWORD is required}@bugsink-db:5432/bugsink
+      BEHIND_HTTPS_PROXY: "true"
+      USE_X_FORWARDED_HOST: "true"
+      BASE_URL: "https://errors.cativo.dev"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import requests; requests.get(\"http://localhost:8000/health/ready\").raise_for_status()'"]
+      interval: 10s
+      timeout: 20s
+      retries: 10
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bugsink.rule=Host(`errors.cativo.dev`)"
+      - "traefik.http.routers.bugsink.entrypoints=websecure"
+      - "traefik.http.routers.bugsink.tls.certresolver=letsencryptresolver"
+      # VPN-only dashboard: internal-only FIRST (clean 403 for public), then
+      # headers. No basicAuth@file on top — Bugsink has its own login, same
+      # as umami.
+      - "traefik.http.routers.bugsink.middlewares=internal-only@file,security-headers@file"
+      - "traefik.http.services.bugsink.loadbalancer.server.port=8000"
+    networks:
+      - space-server_web   # Traefik + reachable from other projects' apps
+      - bugsink-db-net      # reach the database
+    mem_limit: 384m
+
+  bugsink-db:
+    image: postgres:17-alpine
+    container_name: bugsink-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bugsink
+      POSTGRES_USER: bugsink
+      POSTGRES_PASSWORD: ${BUGSINK_DB_PASSWORD:?BUGSINK_DB_PASSWORD is required}
+    volumes:
+      # Named volume (not a /mnt/hdd bind): postgres-alpine runs as a
+      # non-root uid and Docker auto-owns the volume, avoiding bind-mount
+      # permission failures. /mnt/hdd is the same filesystem as / here
+      # anyway, so no separation is lost.
+      - bugsink-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bugsink -d bugsink"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bugsink-db-net      # DB stays OFF the shared web network
+    mem_limit: 192m
+
+networks:
+  space-server_web:
+    external: true
+  bugsink-db-net:
+    driver: bridge
+
+volumes:
+  bugsink-pgdata:
