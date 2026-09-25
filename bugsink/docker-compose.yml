@@ -6,6 +6,12 @@ name: bugsink
 # space-server_web, so a project's Sentry SDK DSN never needs to leave the
 # host network to report an exception — same pattern umami uses for its
 # same-origin tracker calls.
+#
+# The DSN Bugsink's UI shows you uses BASE_URL's public host
+# (errors.cativo.dev) — sending events there would round-trip through
+# Traefik and hit internal-only's VPN gate. In each client project's DSN,
+# replace that host with bugsink:8000 to send over space-server_web
+# instead; only the dashboard itself needs the public route.
 
 services:
   bugsink:
@@ -23,6 +29,11 @@ services:
       BEHIND_HTTPS_PROXY: "true"
       USE_X_FORWARDED_HOST: "true"
       BASE_URL: "https://errors.cativo.dev"
+      # Bugsink derives its allowed Host header list from BASE_URL alone
+      # (errors.cativo.dev/localhost/127.0.0.1), so a request arriving with
+      # `Host: bugsink:8000` — exactly what another container sends when it
+      # posts to the internal DSN below — gets a 400 without this.
+      ALLOWED_HOSTS: "errors.cativo.dev,bugsink,localhost,127.0.0.1"
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import requests; requests.get(\"http://localhost:8000/health/ready\").raise_for_status()'"]
       interval: 10s
@@ -37,7 +48,7 @@ services:
       # VPN-only dashboard: internal-only FIRST (clean 403 for public), then
       # headers. No basicAuth@file on top — Bugsink has its own login, same
       # as umami.
-      - "traefik.http.routers.bugsink.middlewares=internal-only@file,security-headers@file"
+      - "traefik.http.routers.bugsink.middlewares=internal-only@file,security-headers@file,custom-errors@file"
       - "traefik.http.services.bugsink.loadbalancer.server.port=8000"
     networks:
       - space-server_web   # Traefik + reachable from other projects' apps
