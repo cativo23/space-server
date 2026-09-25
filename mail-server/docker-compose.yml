@@ -73,7 +73,7 @@ services:
 
   # Roundcube Webmail
   webmail:
-    image: roundcube/roundcubemail:1.6.15-apache
+    image: roundcube/roundcubemail:1.6.19-apache
     container_name: webmail
     environment:
       # IMAP over STARTTLS, SMTP submission over STARTTLS.
