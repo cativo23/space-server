@@ -1,6 +1,6 @@
 services:
   dockerproxy:
-    image: tecnativa/docker-socket-proxy:v0.4.2
+    image: tecnativa/docker-socket-proxy:v0.5.0
     container_name: dockerproxy
     environment:
       # Minimal API surface for Traefik docker-provider on a non-Swarm host.
@@ -19,7 +19,7 @@ services:
     mem_limit: 64m
 
   traefik:
-    image: traefik:v3.6.17
+    image: traefik:v3.6.25
     container_name: traefik
     ports:
       - "80:80"
@@ -128,7 +128,7 @@ services:
     mem_limit: 64m
 
   node-exporter:
-    image: prom/node-exporter:v1.11.1
+    image: prom/node-exporter:v1.12.1
     container_name: node-exporter
     restart: unless-stopped
     pid: host
@@ -168,7 +168,7 @@ services:
     mem_limit: 256m
 
   grafana:
-    image: grafana/grafana:13.0.1
+    image: grafana/grafana:13.0.9
     container_name: grafana
     restart: unless-stopped
     depends_on:
