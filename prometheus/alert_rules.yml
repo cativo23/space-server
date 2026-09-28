@@ -42,7 +42,11 @@ groups:
     interval: 30s
     rules:
       - alert: ContainerRestartLoop
-        expr: increase(container_start_time_seconds[15m]) > 2
+        # container_start_time_seconds is a timestamp, not a counter: each
+        # restart changes its value once, so changes() counts restarts.
+        # increase() would measure how many seconds it moved, which makes a
+        # single restart more than 2 seconds later look like a loop.
+        expr: changes(container_start_time_seconds[15m]) > 2
         for: 5m
         labels:
           severity: warning

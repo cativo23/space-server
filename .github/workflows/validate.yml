@@ -59,6 +59,12 @@ jobs:
             --entrypoint promtool prom/prometheus:latest \
             check rules /etc/prometheus/alert_rules.yml
 
+      - name: prometheus alert rule tests
+        run: |
+          docker run --rm -v "$PWD/prometheus":/etc/prometheus -w /etc/prometheus \
+            --entrypoint promtool prom/prometheus:latest \
+            test rules alert_rules_test.yml
+
       - name: alertmanager config
         run: |
           docker run --rm -v "$PWD/alertmanager":/etc/alertmanager \
