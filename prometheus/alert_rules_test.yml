@@ -1,0 +1,33 @@
+rule_files:
+  - alert_rules.yml
+
+evaluation_interval: 30s
+
+tests:
+  # One `docker restart` moves the start time forward by several seconds.
+  # That is one restart, not a loop.
+  - interval: 30s
+    input_series:
+      - series: 'container_start_time_seconds{name="app"}'
+        values: '1000x10 1007x40'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: ContainerRestartLoop
+        exp_alerts: []
+
+  # Four restarts within fifteen minutes is a loop; the last is at 8m and
+  # the rule waits 5m before firing.
+  - interval: 30s
+    input_series:
+      - series: 'container_start_time_seconds{name="app"}'
+        values: '1000x4 1120x4 1240x4 1360x4 1480x40'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: ContainerRestartLoop
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              name: app
+            exp_annotations:
+              summary: "Container app restarting repeatedly"
+              description: "Container app has restarted more than twice in the last 15 minutes."
