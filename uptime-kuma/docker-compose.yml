@@ -11,13 +11,22 @@ services:
       - "traefik.http.routers.uptime.entrypoints=websecure"
       - "traefik.http.routers.uptime.tls.certresolver=letsencryptresolver"
       - "traefik.http.routers.uptime.middlewares=internal-only@file,security-headers@file"
-      # status.cativo.dev → redirect to /status/public on uptime.cativo.dev
-      - "traefik.http.routers.uptime-status.rule=Host(`status.cativo.dev`)"
+      # status.cativo.dev serves the public status page itself. It cannot
+      # redirect to uptime.cativo.dev: that host is behind internal-only, so
+      # the redirect landed public visitors on a 403 (broken since F47).
+      # Only the paths the page loads are exposed, on the `public` slug —
+      # login, dashboard and socket.io stay VPN-only on uptime.cativo.dev.
+      - "traefik.http.routers.uptime-status.rule=Host(`status.cativo.dev`) && (Path(`/status/public`) || Path(`/api/status-page/public`) || PathPrefix(`/api/status-page/public/`) || Path(`/api/status-page/heartbeat/public`) || PathPrefix(`/assets/`) || PathPrefix(`/upload/`) || Path(`/icon.svg`))"
       - "traefik.http.routers.uptime-status.entrypoints=websecure"
       - "traefik.http.routers.uptime-status.tls.certresolver=letsencryptresolver"
-      - "traefik.http.routers.uptime-status.middlewares=status-redirect,security-headers@file"
-      - "traefik.http.middlewares.status-redirect.redirectregex.regex=^https?://status\\.cativo\\.dev(/.*)?$"
-      - "traefik.http.middlewares.status-redirect.redirectregex.replacement=https://uptime.cativo.dev/status/public"
+      - "traefik.http.routers.uptime-status.middlewares=security-headers@file"
+      # Bare status.cativo.dev → the status page.
+      - "traefik.http.routers.uptime-status-root.rule=Host(`status.cativo.dev`) && Path(`/`)"
+      - "traefik.http.routers.uptime-status-root.entrypoints=websecure"
+      - "traefik.http.routers.uptime-status-root.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.uptime-status-root.middlewares=status-redirect,security-headers@file"
+      - "traefik.http.middlewares.status-redirect.redirectregex.regex=^https?://status\\.cativo\\.dev/?$"
+      - "traefik.http.middlewares.status-redirect.redirectregex.replacement=https://status.cativo.dev/status/public"
       - "traefik.http.middlewares.status-redirect.redirectregex.permanent=true"
     networks:
       - space-server_web

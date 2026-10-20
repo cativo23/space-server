@@ -2,7 +2,7 @@
 
 Uptime Kuma's built-in status page is the cheapest "health API" we can offer publicly — no new code, no new service, leverages monitors Carlos already configured.
 
-This runbook makes the status page available at **`https://uptime.cativo.dev/status/public`** (or a custom slug). Optional Cloudflare CNAME hop to alias it as `status.cativo.dev`.
+This runbook makes the status page available publicly at **`https://status.cativo.dev/status/public`** (slug `public`). `uptime.cativo.dev` is the admin UI and is VPN-only (`internal-only`, F47), so the public page must be served from the `status.cativo.dev` host, not redirected to it.
 
 > **Live as of 2026-05-20**: the `/status/public` page is configured with three groups (Tools / Mail / Web) and all 11 monitors. Status: All Systems Operational. See `docs/screenshots/status-page.jpg`.
 
@@ -28,7 +28,8 @@ This runbook makes the status page available at **`https://uptime.cativo.dev/sta
 
 ## Step 2 — verify it's public
 
-- Open `https://uptime.cativo.dev/status/public` in an incognito window (no Kuma session)
+- Off the VPN, open `https://status.cativo.dev/` in an incognito window (no Kuma session): it should land on `/status/public`
+- `https://uptime.cativo.dev/` must still return `403` off the VPN
 - All groups + monitors should be visible
 - Toggling **Authentication** in page settings can require login if needed
 
@@ -36,40 +37,18 @@ This runbook makes the status page available at **`https://uptime.cativo.dev/sta
 
 Two ways:
 
-### Easy: Cloudflare page rule / redirect
+### Traefik labels on uptime-kuma
 
-In Cloudflare → `cativo.dev` zone → **Page Rules**:
+`uptime-kuma/docker-compose.yml` defines two routers on `status.cativo.dev`:
 
-- If URL matches `status.cativo.dev/*`
-- Forwarding URL → 301 → `https://uptime.cativo.dev/status/public`
+- `uptime-status` serves only the paths the page loads, for the `public` slug: `/status/public`, `/api/status-page/public`, `/api/status-page/heartbeat/public`, `/assets/`, `/upload/`, `/icon.svg`. It has no `internal-only`, so it is reachable from the internet. Login, dashboard and socket.io are not matched and stay VPN-only on `uptime.cativo.dev`.
+- `uptime-status-root` redirects bare `status.cativo.dev/` to `https://status.cativo.dev/status/public`.
 
-### Cleaner: Traefik label on uptime-kuma
+**History:** this used to redirect to `uptime.cativo.dev/status/public`. After F47 gated that host the redirect landed public visitors on a `403` (found 2026-10-20). The redirect has to stay on `status.cativo.dev` itself: a path rewrite on `/` makes Kuma's SPA client-route to `/dashboard` (tried 2026-05-20, reverted).
 
-**Why redirect and not URL-mask?** A `replacepathregex` rewrite that turns `status.cativo.dev/` into `/status/public` on the backend gets the right HTML, but Kuma's Vue SPA client-side router sees the browser URL as `/` and immediately client-routes to `/dashboard` (login). The only way to mask without code changes to Kuma would be to set Kuma's "Init Page" to `/status/public` — which would also affect `uptime.cativo.dev/` (admin entry moves to `/dashboard`). Tried 2026-05-20, reverted; redirect is the cleanest option.
+If you add a second status page with another slug, add its paths to the `uptime-status` rule; the allowlist is per slug on purpose.
 
-Add a second rule to `uptime-kuma/docker-compose.yml`:
-
-```yaml
-labels:
-  # existing labels stay...
-  - "traefik.http.routers.uptime-status.rule=Host(`status.cativo.dev`)"
-  - "traefik.http.routers.uptime-status.entrypoints=websecure"
-  - "traefik.http.routers.uptime-status.tls.certresolver=letsencryptresolver"
-  - "traefik.http.routers.uptime-status.middlewares=status-redirect,security-headers@file"
-  - "traefik.http.middlewares.status-redirect.redirectregex.regex=^https?://status\\.cativo\\.dev/?$"
-  - "traefik.http.middlewares.status-redirect.redirectregex.replacement=https://uptime.cativo.dev/status/public"
-```
-
-Then in Cloudflare add a CNAME or A record pointing `status.cativo.dev` → `cativo.dev` (DNS only).
-
-> **Note:** `cativo.dev` already has a wildcard A record `*.cativo.dev → polaris2`, so this CNAME step is redundant — any new subdomain just needs the Traefik labels and ACME will provision the cert. Done 2026-05-20: `https://status.cativo.dev` 308-redirects to `https://uptime.cativo.dev/status/public`.
-
-## Step 4 — surface in README
-
-Once the status page is live, replace the `Uptime Kuma` row in the README's "Public subdomains" table with two rows:
-
-| `status.cativo.dev` | Public uptime status page |
-| `uptime.cativo.dev` | Uptime Kuma admin (auth) |
+`*.cativo.dev` already has a wildcard A record to polaris2, so no DNS step is needed.
 
 ## Maintenance
 
