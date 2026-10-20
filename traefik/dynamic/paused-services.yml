@@ -1,7 +1,7 @@
 http:
   routers:
     # Catch-all fallback for any Host with no matching router — services
-    # stopped on purpose (freeing resources: hellokitty, umami, ...) as
+    # stopped on purpose (freeing resources: hellokitty, ...) as
     # well as any genuinely unknown/mistyped subdomain. The Docker
     # provider only creates a router while its container is up, so with
     # it down, nothing else here matches at all and Traefik would

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed — Umami analytics (2026-10-20)
+
+- **The `umami/` stack (F48) is gone.** Umami had been stopped to free resources and the portfolio no longer loads its tracker (portfolio 1.23.0), so the stack, its `.env.example` and the `umami-analytics` runbook are deleted, along with the passing mentions in the admin-VPN runbook, the paused-services fallback comment and the bugsink compose comments.
+  - **Done on polaris2:** `docker compose down` in `umami/`, `docker volume rm umami_umami-pgdata` (no backup kept — the data was barely used) and the Umami image removed. No Uptime-Kuma monitor existed for it. `analytics.cativo.dev` is covered by the wildcard record, so DNS needs no change; with no router left it falls through to the `paused-fallback` error page.
+
 ### Added — HTTP/3 on Traefik (2026-10-20)
 
 - `websecure` now serves HTTP/3 (QUIC on UDP 443); Traefik advertises it with `Alt-Svc`, and clients without UDP 443 keep using HTTP/2. The `traefik` service publishes `443:443/udp`; the Hetzner firewall runbook and `setup-polaris2.sh` list UDP 443.
