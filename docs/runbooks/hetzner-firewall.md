@@ -26,6 +26,7 @@ Apply these rules to the **polaris2** server in the Hetzner Cloud Console
 | TCP      | 52222     | 0.0.0.0/0, ::/0 | SSH on non-standard port             |
 | TCP      | 80        | 0.0.0.0/0, ::/0 | HTTP (Traefik → redirect to HTTPS)   |
 | TCP      | 443       | 0.0.0.0/0, ::/0 | HTTPS (Traefik TLS termination)      |
+| UDP      | 443       | 0.0.0.0/0, ::/0 | HTTP/3 (QUIC, Traefik)               |
 | TCP      | 25        | 0.0.0.0/0, ::/0 | SMTP (inbound mail)                  |
 | TCP      | 465       | 0.0.0.0/0, ::/0 | SMTPS (implicit TLS submission)      |
 | TCP      | 587       | 0.0.0.0/0, ::/0 | Submission STARTTLS                  |
@@ -84,6 +85,10 @@ for port in 52222 80 443 25 465 587 993; do
     --direction in --protocol tcp --port "$port" \
     --source-ips 0.0.0.0/0 --source-ips ::/0
 done
+
+hcloud firewall add-rule polaris2-public \
+  --direction in --protocol udp --port 443 \
+  --source-ips 0.0.0.0/0 --source-ips ::/0
 
 # Assign to polaris2
 hcloud firewall apply-to-server polaris2-public --server polaris2
