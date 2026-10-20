@@ -28,23 +28,32 @@ This repo is the source of truth for that infrastructure — every service, ever
 
 ## What runs here
 
-**Current production:** Hetzner VPS (8GB RAM, Intel Xeon, Ubuntu 24.04). 20 containers across 12 public subdomains.
+**Current production:** Hetzner VPS (8GB RAM, Intel Xeon, Ubuntu 24.04). 49 containers on one host. This repo manages the platform layer (edge, observability, mail, error pages) and the portfolio, blog and landing stacks; the rest are other projects that share the same Traefik. Of the subdomains below, 5 are public and 8 are admin UIs behind the WireGuard VPN.
 
-### Public subdomains
+### Subdomains managed by this repo
+
+**Public**
 
 | URL | Service |
 |---|---|
 | [cativo.dev](https://cativo.dev) | Portfolio (Nuxt 4) |
 | [api.cativo.dev](https://api.cativo.dev) | Portfolio API (NestJS) |
 | [blog.cativo.dev](https://blog.cativo.dev) | Ghost 5 blog |
-| [mail.cativo.dev](https://mail.cativo.dev) | Roundcube webmail |
 | `devi.cativo.dev` | Hello Kitty landing |
+| [status.cativo.dev](https://status.cativo.dev) | Uptime Kuma public status page |
+
+**Admin UIs, VPN-only** (`internal-only` middleware, see [`docs/runbooks/admin-vpn.md`](docs/runbooks/admin-vpn.md)). Off the VPN they return `403`.
+
+| URL | Service |
+|---|---|
+| `mail.cativo.dev` | Roundcube webmail |
 | `grafana.cativo.dev` | Grafana — metrics + dashboards |
-| `prometheus.cativo.dev` | Prometheus UI (basic auth) |
-| `alertmanager.cativo.dev` | Alertmanager UI (basic auth) |
-| `dozzle.cativo.dev` | Dozzle — live container logs (basic auth) |
+| `prometheus.cativo.dev` | Prometheus UI (+ basic auth) |
+| `alertmanager.cativo.dev` | Alertmanager UI (+ basic auth) |
+| `dozzle.cativo.dev` | Dozzle — live container logs (+ basic auth) |
 | `uptime.cativo.dev` | Uptime Kuma — external probes |
-| `traefik.cativo.dev` | Traefik dashboard (basic auth) |
+| `traefik.cativo.dev` | Traefik dashboard (+ basic auth) |
+| `errors.cativo.dev` | Bugsink — error tracking |
 
 Plus SMTP/IMAPS on the standard mail ports.
 
@@ -52,10 +61,10 @@ Plus SMTP/IMAPS on the standard mail ports.
 
 | Layer | What |
 |---|---|
-| **Edge** | Traefik v3.6 — automatic Let's Encrypt SSL, basic-auth on internal dashboards, security headers, bcrypt hashes only |
+| **Edge** | Traefik v3.6 — automatic Let's Encrypt SSL, HTTP/3, WireGuard VPN gate on admin UIs (basic auth as a second layer on some), security headers, bcrypt hashes only |
 | **Mail** | docker-mailserver (Postfix + Dovecot + SpamAssassin) with SPF/DKIM/DMARC; Roundcube webmail over STARTTLS; outbound via Resend SMTP relay (Hetzner blocks port 25) |
 | **Apps** | Ghost 5 (MySQL backing it), Nuxt 4 + NestJS portfolio (the API has MariaDB + Redis), hello-kitty landing |
-| **Observability** | Prometheus (30-day retention), node_exporter, cAdvisor, Alertmanager → Discord webhook (via `alertmanager-discord` adapter), Grafana with provisioned dashboards (Node Exporter Full, Traefik standalone, cAdvisor), Uptime Kuma for external probes, Dozzle for live container logs |
+| **Observability** | Prometheus (30-day retention), node_exporter, cAdvisor, Alertmanager → Discord webhook (via `alertmanager-discord` adapter), Loki + Promtail for logs (7-day retention), Bugsink for application errors, Grafana with provisioned dashboards (Node Exporter Full, Traefik standalone, cAdvisor), Uptime Kuma for external probes, Dozzle for live container logs |
 | **Plumbing** | docker-socket-proxy with minimal API surface (Swarm endpoints disabled), git-on-prod deploy (`git pull && docker compose up -d`) |
 
 Databases and caches (Ghost's MySQL, portfolio's MariaDB, portfolio's Redis) live on **internal-only docker networks** — they're not reachable from the edge.
@@ -149,13 +158,11 @@ The [`IMPROVEMENT-PLAN.md`](IMPROVEMENT-PLAN.md) tracks every finding from a str
 - **[IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md)** — Active findings roadmap with status per item
 - **[CHANGELOG.md](CHANGELOG.md)** — Keep-a-Changelog format
 
-**Current uptime:** 3+ weeks on Hetzner VPS (8GB RAM, Intel Xeon)
-
 ## Tech stack
 
-- **Reverse proxy:** Traefik v3.6 (Let's Encrypt, file + docker providers, basic auth + security-headers middleware)
+- **Reverse proxy:** Traefik v3.6 (Let's Encrypt, file + docker providers, VPN allowlist + basic auth + security-headers middleware)
 - **Mail:** docker-mailserver, Roundcube (STARTTLS internal), Resend SMTP relay (outbound)
-- **Monitoring:** Prometheus, Alertmanager, node_exporter, cAdvisor, Grafana with provisioning, alertmanager-discord sidecar
+- **Monitoring:** Prometheus, Alertmanager, node_exporter, cAdvisor, Loki + Promtail, Bugsink, Grafana with provisioning, alertmanager-discord sidecar
 - **Apps:** Ghost 5, Nuxt 4 frontend, NestJS API, MySQL/MariaDB, Redis
 - **Ops:** Docker Compose v2, git-on-prod, Discord alerting
 
@@ -182,7 +189,7 @@ docker compose up -d
 
 **What worked:**
 - Automated migration scripts pay for themselves the moment you need to recover
-- Traefik + Let's Encrypt makes SSL a non-issue across 15+ subdomains
+- Traefik + Let's Encrypt makes SSL a non-issue across a dozen subdomains
 - Docker Compose is enough for a single-node setup — Kubernetes would be cargo culting
 - Provisioning Grafana from files in git makes dashboards reproducible
 - Conventional commit messages with the *why* in the body pay off when you `git log` six months later
@@ -197,11 +204,10 @@ docker compose up -d
 
 Tracked in [`IMPROVEMENT-PLAN.md`](IMPROVEMENT-PLAN.md). Currently open:
 
-- **F3** — single source of truth via Compose `include:` (Ghost / portfolio / portfolio-api currently in sibling repos)
-- **F6** — Loki + Promtail for log retention and Grafana correlation
-- **F7** — split flat `web` network into `edge` / `apps` / `mail` / `monitoring`
-- **F8** — DNS-01 challenge for wildcard cert
+- **F8** — DNS-01 challenge (Cloudflare) for a wildcard cert
 - **F4** — automated backups via `restic` → Hetzner Storage Box
+- **F16** — SOPS/age for encrypted secrets in git
+- **F46** — offsite dead-man switch so a full-host outage still alerts Discord
 - **Eventually** — Ansible playbook for full reproducibility from a fresh VPS
 
 ## Repo structure
