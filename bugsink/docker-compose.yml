@@ -4,8 +4,7 @@ name: bugsink
 # VPN-gated (internal-only@file) like the other admin UIs. Reachable from
 # other projects' app containers as http://bugsink:8000 over
 # space-server_web, so a project's Sentry SDK DSN never needs to leave the
-# host network to report an exception — same pattern umami uses for its
-# same-origin tracker calls.
+# host network to report an exception.
 #
 # The DSN Bugsink's UI shows you uses BASE_URL's public host
 # (errors.cativo.dev) — sending events there would round-trip through
@@ -65,8 +64,7 @@ services:
       # VPN-only dashboard: security-headers outermost so it still applies to
       # the substituted error page; custom-errors wraps internal-only so the
       # ipAllowList's 403 renders the styled page instead of Traefik's raw
-      # 403. No basicAuth@file on top — Bugsink has its own login, same as
-      # umami.
+      # 403. No basicAuth@file on top — Bugsink has its own login.
       - "traefik.http.routers.bugsink.middlewares=security-headers@file,custom-errors@file,internal-only@file"
       - "traefik.http.services.bugsink.loadbalancer.server.port=8000"
     networks:
