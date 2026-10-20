@@ -56,7 +56,6 @@ MONITORS: list[tuple[str, str, list[str]]] = [
     ("cativo.dev",             "https://cativo.dev",                   ["200-299", "301", "302"]),
     ("blog.cativo.dev",        "https://blog.cativo.dev",              ["200-299", "301", "302"]),
     ("api.cativo.dev",         "https://api.cativo.dev/health",        ["200-299"]),
-    ("devi.cativo.dev",        "https://devi.cativo.dev",              ["200-299", "301", "302"]),
     # VPN-gated admin UIs — probed from inside the docker network (F47)
     ("mail.cativo.dev",        "http://webmail:80/",                   ["200-299", "301", "302"]),
     ("grafana.cativo.dev",     "http://grafana:3000/api/health",       ["200-299"]),
