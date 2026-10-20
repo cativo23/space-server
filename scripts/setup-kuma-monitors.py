@@ -56,7 +56,18 @@ MONITORS: list[tuple[str, str, list[str]]] = [
     ("cativo.dev",             "https://cativo.dev",                   ["200-299", "301", "302"]),
     ("blog.cativo.dev",        "https://blog.cativo.dev",              ["200-299", "301", "302"]),
     ("api.cativo.dev",         "https://api.cativo.dev/health",        ["200-299"]),
-    ("devi.cativo.dev",        "https://devi.cativo.dev",              ["200-299", "301", "302"]),
+    # Public status page: it was a silent 403 for four months once (F47 gated the
+    # host it redirected to). This probe is the guard against that recurring.
+    ("status.cativo.dev",      "https://status.cativo.dev/status/public", ["200-299"]),
+    # other projects sharing the host; burst-tested 15/15 stable before adding
+    ("tcgvault.cativo.dev",    "https://tcgvault.cativo.dev",          ["200-299"]),
+    ("clarify.cativo.dev",     "https://clarify.cativo.dev",           ["200-299"]),
+    ("app.cativo.dev",         "https://app.cativo.dev",               ["200-299"]),
+    ("auth.cativo.dev",        "https://auth.cativo.dev",              ["200-299"]),
+    ("admin.cativo.dev",       "https://admin.cativo.dev",             ["200-299"]),
+    ("tcg.cativo.dev",         "https://tcg.cativo.dev",               ["200-299"]),
+    ("binder.cativo.dev",      "https://binder.cativo.dev",            ["200-299", "401"]),  # 401 = gated on purpose
+    ("nightwire.cativo.dev",   "https://nightwire.cativo.dev",         ["200-299"]),
     # VPN-gated admin UIs — probed from inside the docker network (F47)
     ("mail.cativo.dev",        "http://webmail:80/",                   ["200-299", "301", "302"]),
     ("grafana.cativo.dev",     "http://grafana:3000/api/health",       ["200-299"]),
@@ -65,6 +76,13 @@ MONITORS: list[tuple[str, str, list[str]]] = [
     ("dozzle.cativo.dev",      "http://dozzle:8080/",                  ["200-299"]),
     ("uptime.cativo.dev",      "http://uptime-kuma:3001/",             ["200-299", "302"]),
     ("traefik.cativo.dev",     "http://traefik:8081/ping",             ["200-299"]),
+]
+
+# (name, hostname, port) — TCP connect only, no auth. Webmail above covers
+# Roundcube; these cover the mail server itself (submission + IMAPS).
+TCP_MONITORS: list[tuple[str, str, int]] = [
+    ("mail.cativo.dev:587",    "mail.cativo.dev",                      587),
+    ("mail.cativo.dev:993",    "mail.cativo.dev",                      993),
 ]
 
 
@@ -132,6 +150,27 @@ def main() -> int:
                 )
                 print(f"  [fix]  {name} reconciled")
                 fixed += 1
+
+        for name, host, port in TCP_MONITORS:
+            current = existing.get(name)
+            if current is None:
+                api.add_monitor(
+                    type=MonitorType.PORT,
+                    name=name,
+                    hostname=host,
+                    port=port,
+                    interval=60,
+                    retryInterval=20,
+                    maxretries=2,
+                )
+                print(f"  [add]  {name} -> tcp {host}:{port}")
+                added += 1
+            elif (current.get("hostname"), current.get("port")) != (host, port):
+                drifted += 1
+                print(f"  [drift]{name}: {current.get('hostname')}:{current.get('port')} -> {host}:{port}")
+            else:
+                print(f"  [ok]   {name}")
+                ok += 1
 
         print(f"\ndone: added {added}, ok {ok}, drifted {drifted}, fixed {fixed}")
         if drifted and not apply_edits:
