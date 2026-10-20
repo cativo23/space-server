@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — HTTP/3 on Traefik (2026-10-20)
+
+- `websecure` now serves HTTP/3 (QUIC on UDP 443); Traefik advertises it with `Alt-Svc`, and clients without UDP 443 keep using HTTP/2. The `traefik` service publishes `443:443/udp`; the Hetzner firewall runbook and `setup-polaris2.sh` list UDP 443.
+  - **Deploy:** Docker publishes the port past ufw, so the gate that matters is the Hetzner Cloud Firewall — if it is applied to polaris2, add an inbound UDP 443 rule there first (the `ufw allow 443/udp` in the setup script is hygiene only). Then `git pull && docker compose up -d traefik` (static config: Traefik restarts, a few seconds of downtime for every site; `acme.json` persists).
+  - **Verify:** `docker port traefik` lists `443/udp`; `curl -sI https://tcgvault.cativo.dev | grep -i alt-svc` shows `h3`; `curl --http3-only -sI https://tcgvault.cativo.dev` succeeds from outside; from the VPN, `curl --http3-only -sI https://traefik.cativo.dev` answers 401/200, not 403 (the `internal-only` allowlist still sees the real client IP over QUIC); `docker logs traefik` shows no errors; watch `docker stats traefik` against its 256m limit.
+  - **Rollback:** remove the `http3` block and the `443/udp` port, `docker compose up -d traefik`; clients that cached `Alt-Svc` fall back to TCP after one failed UDP attempt.
+
 ### Added — self-hosted analytics (Umami) (2026-07-16)
 
 - **Umami analytics stack (F48).** New `umami/` stack: Umami v3 (`umami`, pinned by digest) + a dedicated `postgres:16-alpine` (`umami-db`). Dashboard at `analytics.cativo.dev`, VPN-gated via `internal-only@file` like the other admin UIs (off-VPN → `403`). The DB is on a private `umami-db-net` bridge — **not** on `space-server_web`; the app is on both (web for Traefik + the portfolio same-origin proxy, db-net for Postgres). Postgres data on the Docker named volume `umami-pgdata`, UTC. Secrets in `umami/.env` (gitignored). See `docs/runbooks/umami-analytics.md`.

@@ -68,6 +68,7 @@ sudo ufw allow 52222/tcp comment 'SSH'
 # HTTP/HTTPS
 sudo ufw allow 80/tcp comment 'HTTP'
 sudo ufw allow 443/tcp comment 'HTTPS'
+sudo ufw allow 443/udp comment 'HTTPS (HTTP/3)'
 
 # Mail ports
 sudo ufw allow 25/tcp comment 'SMTP'
