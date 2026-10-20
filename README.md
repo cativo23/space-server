@@ -28,7 +28,7 @@ This repo is the source of truth for that infrastructure — every service, ever
 
 ## What runs here
 
-**Current production:** Hetzner VPS (8GB RAM, Intel Xeon, Ubuntu 24.04). 49 containers on one host. This repo manages the platform layer (edge, observability, mail, error pages) and the portfolio, blog and landing stacks; the rest are other projects that share the same Traefik. Of the subdomains below, 5 are public and 8 are admin UIs behind the WireGuard VPN.
+**Current production:** Hetzner VPS (8GB RAM, Intel Xeon, Ubuntu 24.04). 49 containers on one host. This repo manages the platform layer (edge, observability, mail, error pages) and the portfolio, blog and landing stacks; the rest are other projects that share the same Traefik. Of the subdomains below, 4 are public and 8 are admin UIs behind the WireGuard VPN.
 
 ### Subdomains managed by this repo
 
@@ -40,7 +40,6 @@ This repo is the source of truth for that infrastructure — every service, ever
 | [api.cativo.dev](https://api.cativo.dev) | Portfolio API (NestJS) |
 | [blog.cativo.dev](https://blog.cativo.dev) | Ghost 5 blog |
 | `devi.cativo.dev` | Hello Kitty landing |
-| [status.cativo.dev](https://status.cativo.dev) | Uptime Kuma public status page |
 
 **Admin UIs, VPN-only** (`internal-only` middleware, see [`docs/runbooks/admin-vpn.md`](docs/runbooks/admin-vpn.md)). Off the VPN they return `403`.
 
@@ -54,6 +53,8 @@ This repo is the source of truth for that infrastructure — every service, ever
 | `uptime.cativo.dev` | Uptime Kuma — external probes |
 | `traefik.cativo.dev` | Traefik dashboard (+ basic auth) |
 | `errors.cativo.dev` | Bugsink — error tracking |
+
+`status.cativo.dev` redirects to the Uptime Kuma status page on `uptime.cativo.dev`, which sits behind the VPN gate, so off-VPN visitors currently get `403` after the redirect.
 
 Plus SMTP/IMAPS on the standard mail ports.
 
