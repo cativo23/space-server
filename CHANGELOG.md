@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — HTTP/3 on Traefik (2026-10-20)
+
+- `websecure` now serves HTTP/3 (QUIC on UDP 443); Traefik advertises it with `Alt-Svc`, and clients without UDP 443 keep using HTTP/2. The `traefik` service publishes `443:443/udp`. **Deploy:** `sudo ufw allow 443/udp comment 'HTTPS (HTTP/3)'` on the host, then `docker compose up -d traefik` (static config change → Traefik restarts).
+
 ### Added — self-hosted analytics (Umami) (2026-07-16)
 
 - **Umami analytics stack (F48).** New `umami/` stack: Umami v3 (`umami`, pinned by digest) + a dedicated `postgres:16-alpine` (`umami-db`). Dashboard at `analytics.cativo.dev`, VPN-gated via `internal-only@file` like the other admin UIs (off-VPN → `403`). The DB is on a private `umami-db-net` bridge — **not** on `space-server_web`; the app is on both (web for Traefik + the portfolio same-origin proxy, db-net for Postgres). Postgres data on the Docker named volume `umami-pgdata`, UTC. Secrets in `umami/.env` (gitignored). See `docs/runbooks/umami-analytics.md`.

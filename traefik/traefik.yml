@@ -8,6 +8,10 @@ entryPoints:
           scheme: https
   websecure:
     address: ":443"
+    # HTTP/3 (QUIC over UDP 443): one fewer round trip on new connections
+    # and better recovery on lossy routes. Browsers learn it from Alt-Svc
+    # and fall back to HTTP/2 over TCP if UDP 443 is blocked on their side.
+    http3: {}
   metrics:
     address: ":8082"
   ping:
