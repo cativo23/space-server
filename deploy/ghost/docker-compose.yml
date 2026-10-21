@@ -1,9 +1,9 @@
 name: ghost-blog-prod
 services:
   ghost:
-    # F15: exact version + digest verified identical to what ran on 2026-10-20. Ghost 5 is EOL
-    # (Jan 2026); the move to Ghost 6 is a separate, rehearsed change.
-    image: ghost:5.130.6-alpine@sha256:a0506f3f05f5bdc6c950c5113cdcdb1e1f96fbf15f6dc0a39fc093c25348bdb5
+    # Ghost 6 (Ghost 5 went EOL in Jan 2026). The digest rehearsed is the digest deployed.
+    # Rollback target: tag ghost-pre-b (Ghost 5.130.6 + MySQL 8.0.46 on the old volumes).
+    image: ghost:6.72.0-alpine@sha256:5dcbc3d1d27206db4f5fc2099524b0b447cf986f2f64d1f95b045200e2ca1f65
     restart: unless-stopped
     # F30: ceiling sized at >=2x the peak measured on polaris2 (2026-10-20).
     mem_limit: 512m  # peak 173 MiB
@@ -23,7 +23,9 @@ services:
       imageOptimization__resize: false
       NODE_ENV: production
     volumes:
-      - ghost-content:/var/lib/ghost/content
+      # New volume on purpose: the old `ghost-content` stays untouched for rollback, and is
+      # deliberately NOT declared below so `down -v` from this file can never delete it.
+      - ghost-content-v6:/var/lib/ghost/content
     depends_on:
       db:
         condition: service_healthy
@@ -42,29 +44,44 @@ services:
       - "traefik.http.routers.ghost-blog.tls.certresolver=letsencryptresolver"
       - "traefik.http.routers.ghost-blog.middlewares=custom-errors@file"
       - "traefik.http.services.ghost-blog.loadbalancer.server.port=2368"
+      # Admin and its API get no custom-errors: the Ghost 6 admin app reads the 403 JSON from
+      # /ghost/api/admin/users/me/ to decide to show the sign-in screen. With the styled HTML
+      # page substituted it never gets there ("Something went wrong while loading users").
+      - "traefik.http.routers.ghost-blog-admin.rule=Host(`blog.cativo.dev`) && PathPrefix(`/ghost`)"
+      - "traefik.http.routers.ghost-blog-admin.priority=100"
+      - "traefik.http.routers.ghost-blog-admin.entrypoints=websecure"
+      - "traefik.http.routers.ghost-blog-admin.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.ghost-blog-admin.service=ghost-blog"
       - "traefik.docker.network=space-server_web"
     networks:
       - ghost-internal
       - space-server_web
 
   db:
-    # F15: pinned to 8.0.46 (digest verified 2026-10-20). MySQL 8.0 is EOL (2026-04-30); 8.4 LTS
-    # is a separate, rehearsed change (the auth-plugin flag below is removed in 8.4).
-    image: mysql:8.0.46@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
+    # MySQL 8.4 LTS (8.0 went EOL 2026-04-30). The official image tops out at 8.4.11 today
+    # (8.4.13 exists upstream but not on Docker Hub). Digest rehearsed == digest deployed.
+    image: mysql:8.4.11@sha256:0f51e63e537a1f176423fa03ef559aabe6fa4372a53160a44bc7e75da7d15364
     restart: unless-stopped
+    # Collation: Ghost 6 creates tables with `default character set utf8mb4`, which MySQL resolves to
+    # utf8mb4_0900_ai_ci and cannot FK to the utf8mb4_general_ci tables a Ghost 5 database has (errno 3780).
+    # The cutover therefore converts the restored database to 0900_ai_ci before Ghost 6 starts.
     # F30: ceiling sized at >=2x the peak measured on polaris2 (2026-10-20).
     # Generous on purpose: an OOM kill here means InnoDB crash recovery.
     mem_limit: 1g  # peak 492 MiB
-    command: --default-authentication-plugin=mysql_native_password
+    # `--default-authentication-plugin` is gone in 8.4 (mysqld would refuse to start). The ghost
+    # user is created by the entrypoint with caching_sha2_password, which mysql2 handles.
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ghost
       MYSQL_USER: ghost
       MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - db-data:/var/lib/mysql
+      # New volume on purpose (old `db-data` untouched for rollback, not declared below).
+      - db-data-84:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      # 127.0.0.1 (TCP), not localhost (socket): the entrypoint's temporary init server answers
+      # on the socket, which would report healthy before 3306 is open.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
       timeout: 5s
       retries: 10
       interval: 3s
@@ -72,8 +89,8 @@ services:
       - ghost-internal
 
 volumes:
-  ghost-content:
-  db-data:
+  ghost-content-v6:
+  db-data-84:
 
 networks:
   ghost-internal:
