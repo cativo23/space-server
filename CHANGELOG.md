@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — public status page was a 403 (2026-10-20)
+
+- **`status.cativo.dev` now serves the status page itself** instead of redirecting to `uptime.cativo.dev`, which has been behind `internal-only` since F47. Only the `public` slug's paths are exposed (`/status/public`, its API, `/assets/`, `/upload/`, `/icon.svg`); login, dashboard and socket.io stay VPN-only. See F51 and `docs/runbooks/status-page.md`.
+
+### Added — Uptime Kuma coverage and a Nightwire status page (2026-10-20)
+
+- **Monitors 11 → 21** (F52): the status page, tcgvault, clarify, nova-id `app`/`auth`/`admin`, tcg, binder, nightwire and TCP checks on `mail.cativo.dev:587`/`:993`. `devi.cativo.dev` was dropped. `scripts/setup-kuma-monitors.py` gained a `TCP_MONITORS` table.
+- **Nightwire skin** for the public page (`uptime-kuma/status-page.css`), new favicon, generic description, groups Web / Apps / Identity / Mail. The admin-tool monitors keep running and alerting but are not published (F53).
+
+### Changed — host maintenance (2026-10-20)
+
+- **polaris2 rebooted** onto kernel 6.8.0-147 after a reboot pending since 2026-10-14, and `mail-server` recreated so Roundcube runs the pinned `1.6.19` instead of `1.6.15` (F54).
+- **README and `IMPROVEMENT-PLAN.md` re-audited against production.** F7, F15, F30, F34 and F40 are back to in-progress; new items F56–F59 opened.
+
 ### Removed — Umami analytics (2026-10-20)
 
 - **The `umami/` stack (F48) is gone.** Umami had been stopped to free resources and the portfolio no longer loads its tracker (portfolio 1.23.0), so the stack, its `.env.example` and the `umami-analytics` runbook are deleted, along with the passing mentions in the admin-VPN runbook, the paused-services fallback comment and the bugsink compose comments.
