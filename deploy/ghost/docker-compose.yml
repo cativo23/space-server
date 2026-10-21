@@ -3,6 +3,8 @@ services:
   ghost:
     image: ghost:5-alpine
     restart: unless-stopped
+    # F30: ceiling sized at >=2x the peak measured on polaris2 (2026-10-20).
+    mem_limit: 512m  # peak 173 MiB
     environment:
       database__client: mysql
       database__connection__host: db
@@ -46,6 +48,9 @@ services:
   db:
     image: mysql:8.0
     restart: unless-stopped
+    # F30: ceiling sized at >=2x the peak measured on polaris2 (2026-10-20).
+    # Generous on purpose: an OOM kill here means InnoDB crash recovery.
+    mem_limit: 1g  # peak 492 MiB
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}

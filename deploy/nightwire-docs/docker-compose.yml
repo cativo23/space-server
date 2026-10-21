@@ -4,6 +4,8 @@ services:
   app:
     image: ${DOCKER_USERNAME:-cativo23}/nightwire-docs:latest
     restart: unless-stopped
+    # F30: ceiling sized at >=2x the peak measured on polaris2 (2026-10-20).
+    mem_limit: 64m  # peak 10 MiB
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
       interval: 30s
