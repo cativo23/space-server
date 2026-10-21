@@ -54,7 +54,7 @@ If you add a second status page with another slug, add its paths to the `uptime-
 
 The page wears the same design system as cativo.dev. The CSS lives in [`uptime-kuma/status-page.css`](../../uptime-kuma/status-page.css) (tokens copied from `nightwire/nightwire.css`) and is stored in the `custom_css` column of Kuma's `status_page` table. The repo file is the source of truth; the DB is just where Kuma reads it.
 
-Applied 2026-10-20 together with: theme forced to `dark`, logo = the portfolio favicon at `/upload/logo-nightwire.svg` (`/upload/` is one of the paths exposed on `status.cativo.dev`), footer `cativo.dev · built with Nightwire`, and the groups Web / Apps / Identity / Mail / Admin tools (VPN). The monitor for the status page itself is deliberately in no group.
+Applied 2026-10-20 together with: theme forced to `dark`, logo = the portfolio favicon at `/upload/logo-nightwire.svg` (`/upload/` is one of the paths exposed on `status.cativo.dev`), footer `cativo.dev · built with Nightwire`, and the groups Web / Apps / Identity / Mail. The monitor for the status page itself and the six admin-tool monitors (grafana, prometheus, alertmanager, dozzle, traefik, uptime) are deliberately in **no** group: they keep running and alerting to Discord, but the public page must not reveal which internal tools exist or that they sit behind a VPN. The description is kept generic for the same reason (no provider, no network details).
 
 **To change the CSS** (Kuma's UI also has a Custom CSS box under *Edit Status Page*, but it would drift from the repo):
 
