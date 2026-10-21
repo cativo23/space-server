@@ -44,6 +44,14 @@ services:
       - "traefik.http.routers.ghost-blog.tls.certresolver=letsencryptresolver"
       - "traefik.http.routers.ghost-blog.middlewares=custom-errors@file"
       - "traefik.http.services.ghost-blog.loadbalancer.server.port=2368"
+      # Admin and its API get no custom-errors: the Ghost 6 admin app reads the 403 JSON from
+      # /ghost/api/admin/users/me/ to decide to show the sign-in screen. With the styled HTML
+      # page substituted it never gets there ("Something went wrong while loading users").
+      - "traefik.http.routers.ghost-blog-admin.rule=Host(`blog.cativo.dev`) && PathPrefix(`/ghost`)"
+      - "traefik.http.routers.ghost-blog-admin.priority=100"
+      - "traefik.http.routers.ghost-blog-admin.entrypoints=websecure"
+      - "traefik.http.routers.ghost-blog-admin.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.ghost-blog-admin.service=ghost-blog"
       - "traefik.docker.network=space-server_web"
     networks:
       - ghost-internal
