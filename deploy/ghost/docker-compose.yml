@@ -1,7 +1,9 @@
 name: ghost-blog-prod
 services:
   ghost:
-    image: ghost:5-alpine
+    # F15: exact version + digest verified identical to what ran on 2026-10-20. Ghost 5 is EOL
+    # (Jan 2026); the move to Ghost 6 is a separate, rehearsed change.
+    image: ghost:5.130.6-alpine@sha256:a0506f3f05f5bdc6c950c5113cdcdb1e1f96fbf15f6dc0a39fc093c25348bdb5
     restart: unless-stopped
     # F30: ceiling sized at >=2x the peak measured on polaris2 (2026-10-20).
     mem_limit: 512m  # peak 173 MiB
@@ -46,7 +48,9 @@ services:
       - space-server_web
 
   db:
-    image: mysql:8.0
+    # F15: pinned to 8.0.46 (digest verified 2026-10-20). MySQL 8.0 is EOL (2026-04-30); 8.4 LTS
+    # is a separate, rehearsed change (the auth-plugin flag below is removed in 8.4).
+    image: mysql:8.0.46@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
     restart: unless-stopped
     # F30: ceiling sized at >=2x the peak measured on polaris2 (2026-10-20).
     # Generous on purpose: an OOM kill here means InnoDB crash recovery.

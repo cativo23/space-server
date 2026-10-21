@@ -14,7 +14,8 @@ name: bugsink
 
 services:
   bugsink:
-    image: bugsink/bugsink:2
+    # F15: exact version + digest verified identical to what ran on 2026-10-20.
+    image: bugsink/bugsink:2.6.1@sha256:c5e3657451f4ba1ddb145a5118a4347314206cc5ba98f40e5f268c6c0975963e
     container_name: bugsink
     restart: unless-stopped
     depends_on:
@@ -73,7 +74,8 @@ services:
     mem_limit: 384m
 
   bugsink-db:
-    image: postgres:17-alpine
+    # F15: exact version + digest verified identical to what ran on 2026-10-20.
+    image: postgres:17.11-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
     container_name: bugsink-db
     restart: unless-stopped
     environment:
