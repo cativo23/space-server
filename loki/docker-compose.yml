@@ -16,6 +16,7 @@ services:
   promtail:
     image: grafana/promtail:3.6.11
     container_name: promtail
+    # No healthcheck (F34): distroless, like Loki above — no shell, wget or curl.
     command: -config.file=/etc/promtail/promtail-config.yml
     volumes:
       - ./promtail-config.yml:/etc/promtail/promtail-config.yml:ro

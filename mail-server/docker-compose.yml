@@ -91,6 +91,12 @@ services:
     volumes:
       - webmail-data:/var/roundcube/db
       - ./roundcube-config.inc.php:/var/www/html/config/config.inc.php:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mail.rule=Host(`mail.${MAIL_DOMAIN}`)"
