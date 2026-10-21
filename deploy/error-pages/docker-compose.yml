@@ -11,7 +11,10 @@ name: error-pages
 
 services:
   app:
-    image: nginx:1.27-alpine
+    # nginx 1.27 went EOL 2025-06-24 (last build 1.27.5, 2025-04-16). 1.30 is the current
+    # stable line (even minors are stable). Digest verified 2026-10-20; `nginx -t` passed
+    # against this stack's nginx.conf before the change.
+    image: nginx:1.30.6-alpine@sha256:970364228b1e4f932abc22d321932816782cca8a20b85a77552a7cfe9acfb3b5
     container_name: error-pages
     restart: unless-stopped
     # F30: ceiling sized at >=2x the peak measured on polaris2 (2026-10-20).
