@@ -23,6 +23,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      # Ghost redirects plain-HTTP requests to its https `url`, which would make
+      # a naive probe fail; the forwarded-proto header makes it answer directly.
+      test: ["CMD", "wget", "-q", "--spider", "--header=X-Forwarded-Proto: https", "http://127.0.0.1:2368/ghost/api/admin/site/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.ghost-blog.rule=Host(`blog.cativo.dev`)"

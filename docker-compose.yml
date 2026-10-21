@@ -17,6 +17,13 @@ services:
       - web
     restart: unless-stopped
     mem_limit: 64m
+    healthcheck:
+      # PING=1 above exposes /_ping, which answers 200 while haproxy is up.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2375/_ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   traefik:
     image: traefik:v3.6.25
@@ -127,6 +134,9 @@ services:
     networks:
       - monitoring
     mem_limit: 64m
+    # No healthcheck (F34): the image is a bare Go binary with no shell, wget
+    # or curl, so an exec check is impossible. Prometheus' `up` alert and the
+    # Discord path itself are the signal.
 
   node-exporter:
     image: prom/node-exporter:v1.12.1
@@ -143,6 +153,12 @@ services:
     networks:
       - monitoring
     mem_limit: 64m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9100/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   cadvisor:
     image: ghcr.io/google/cadvisor:v0.60.6
