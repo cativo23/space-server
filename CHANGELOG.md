@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — the blog moves to Ghost 6.72 and MySQL 8.4 LTS (2026-10-21)
+
+- **`deploy/ghost` now runs `ghost:6.72.0-alpine` and `mysql:8.4.11`**, both pinned by digest (F15, F35). Ghost 5 (EOL Jan 2026) and MySQL 8.0 (EOL 2026-04-30) are gone from production. Cutover took 79 s: 75 tables, 1410 rows and 73 foreign keys identical, 361 → 506 migrations, 22 posts served, 89 content files with matching checksums.
+- **New volumes** `ghost-blog-prod_ghost-content-v6` and `ghost-blog-prod_db-data-84`. The old `ghost-content` and `db-data` volumes are untouched and not declared in the compose file, so `down -v` cannot delete them. The `--default-authentication-plugin` flag is removed (mysqld 8.4 refuses it).
+- **Required collation step:** Ghost 6 creates tables with `default character set utf8mb4`, which MySQL resolves to `utf8mb4_0900_ai_ci`; that cannot be a foreign key against the `utf8mb4_general_ci` tables of a Ghost 5 database (errno 3780 in `add-gifts-table`, reproduced on MySQL 8.0.46 too). Setting the database default does not help. The restored database was converted with `ALTER TABLE ... CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci` before Ghost started.
+- **Rollback window:** tag `ghost-pre-b`, the old volumes and `~/backups/ghost-cutover-20261021T034320Z` (final dump, cold copy of the old data dir, row counts). Old volumes are removed on 2026-10-28 after a separate approval; no `image prune -a` or `volume prune` until then.
+
+### Fixed — Ghost 6 admin could not show its login (2026-10-21)
+
+- `custom-errors` replaced the 403 JSON of `/ghost/api/admin/users/me/` with the styled HTML page, so the admin app stopped on "Something went wrong while loading users". A separate router for `Host(blog.cativo.dev) && PathPrefix(/ghost)` (priority 100) has no error middleware; public pages keep the styled errors.
+
+### Changed — images pinned, nginx off the EOL line (2026-10-21)
+
+- ghost, mysql, bugsink and its postgres pinned to the digests running at the time (PR #28); the error-pages nginx moved from the EOL 1.27 line to `1.30.6-alpine` by digest (PR #29).
+- The `Deploy` workflow of `cativo23/ghost-blog` was disabled; it would have run `compose down/up` against this same project on a release.
+
 ### Fixed — public status page was a 403 (2026-10-20)
 
 - **`status.cativo.dev` now serves the status page itself** instead of redirecting to `uptime.cativo.dev`, which has been behind `internal-only` since F47. Only the `public` slug's paths are exposed (`/status/public`, its API, `/assets/`, `/upload/`, `/icon.svg`); login, dashboard and socket.io stay VPN-only. See F51 and `docs/runbooks/status-page.md`.
