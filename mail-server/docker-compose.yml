@@ -64,6 +64,8 @@ services:
       - NET_ADMIN
       - SYS_PTRACE
     restart: always
+    # F30: ceiling sized at >=2x the peak measured on polaris2 (2026-10-20).
+    mem_limit: 1g  # peak 414 MiB
     healthcheck:
       test: ["CMD-SHELL", "ss -tlnp | grep -qE ':(25|465|587|993)'"]
       interval: 30s
@@ -107,6 +109,8 @@ services:
     depends_on:
       - mail
     restart: always
+    # F30: ceiling sized at >=2x the peak measured on polaris2 (2026-10-20).
+    mem_limit: 256m  # peak 110 MiB
 
 networks:
   # The service-side reference stays `web` for backwards-compat with
