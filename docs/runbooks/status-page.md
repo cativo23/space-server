@@ -50,6 +50,27 @@ If you add a second status page with another slug, add its paths to the `uptime-
 
 `*.cativo.dev` already has a wildcard A record to polaris2, so no DNS step is needed.
 
+## Nightwire skin
+
+The page wears the same design system as cativo.dev. The CSS lives in [`uptime-kuma/status-page.css`](../../uptime-kuma/status-page.css) (tokens copied from `nightwire/nightwire.css`) and is stored in the `custom_css` column of Kuma's `status_page` table. The repo file is the source of truth; the DB is just where Kuma reads it.
+
+Applied 2026-10-20 together with: theme forced to `dark`, logo = the portfolio favicon at `/upload/logo-nightwire.svg` (`/upload/` is one of the paths exposed on `status.cativo.dev`), footer `cativo.dev · built with Nightwire`, and the groups Web / Apps / Identity / Mail / Admin tools (VPN). The monitor for the status page itself is deliberately in no group.
+
+**To change the CSS** (Kuma's UI also has a Custom CSS box under *Edit Status Page*, but it would drift from the repo):
+
+```bash
+# 1. back up, then write the repo file into the DB (on polaris2)
+docker exec uptime-kuma sqlite3 /app/data/kuma.db ".backup /app/data/kuma.db.bak-$(date +%Y%m%d-%H%M%S)-pre-css"
+python3 - <<'PY' | docker exec -i uptime-kuma sqlite3 /app/data/kuma.db
+css = open("uptime-kuma/status-page.css").read().replace("'", "''")
+print(f"UPDATE status_page SET custom_css='{css}', modified_date=datetime('now') WHERE slug='public';")
+PY
+# 2. Kuma caches the page in memory for a few minutes; restart to see it now
+docker restart uptime-kuma
+```
+
+Gotchas: the heartbeat bars are drawn on a `<canvas>` and keep Kuma's own colors; Kuma ships its own sans font on rows, hence the zero-specificity `:where()` rule in the CSS; `@import` of Google Fonts works because the status host sets no CSP (if one is added, allow `fonts.googleapis.com` / `fonts.gstatic.com`).
+
 ## Maintenance
 
 - Add new services to monitors as they get deployed
