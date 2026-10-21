@@ -1,0 +1,128 @@
+/* Nightwire skin for the public Uptime Kuma status page (slug `public`).
+ *
+ * Tokens come from ~/projects/personal/nightwire/nightwire.css (the same
+ * design system cativo.dev uses). Applied to the `custom_css` column of
+ * Kuma's `status_page` table — see docs/runbooks/status-page.md.
+ *
+ * Fonts load from Google Fonts like the portfolio does; the status host sets
+ * no CSP, so the @import is allowed. The heartbeat bars are drawn on a
+ * <canvas> by Kuma and keep their own green/red; they are not styleable here.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Display:wght@900&family=JetBrains+Mono:wght@400;500;700&family=Saira+Extra+Condensed:wght@600;700&display=swap');
+
+:root {
+  --void: #000000;
+  --void-warm: #0a0a0a;
+  --void-panel: #111111;
+  --nw-primary: #6699ff;
+  --nw-primary-dim: #4477cc;
+  --nw-primary-hot: #99bbff;
+  --nw-green: #7aed7a;
+  --nw-yellow: #e8993a;
+  --nw-red: #ff6688;
+  --nw-text: #ffffff;
+  --nw-text-dim: #aaaaaa;
+  --nw-line: rgba(255, 255, 255, 0.12);
+  --nw-faint: rgba(255, 255, 255, 0.06);
+}
+
+/* Nightwire is dark-only: ignore the visitor's light/auto preference. */
+body,
+body.light,
+body.dark {
+  background: var(--void);
+  color: var(--nw-text);
+  font-family: 'JetBrains Mono', 'Cascadia Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a { color: var(--nw-primary); text-decoration: none; }
+a:hover { color: var(--nw-primary-hot); text-decoration: underline; }
+
+.container { max-width: 880px; }
+
+/* Title: cinematic serif, compressed, like the portfolio headings */
+h1.title-flex { align-items: center; margin-bottom: 1.75rem !important; }
+h1.title-flex .logo { width: 40px; height: 40px; }
+h1.title-flex > span[contenteditable] {
+  display: inline-block;
+  font-family: 'Noto Serif Display', 'Times New Roman', serif;
+  font-weight: 900;
+  font-size: 28px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--nw-text);
+  transform: scaleX(0.82);
+  transform-origin: left center;
+}
+
+/* Description under the title */
+.description, .description p, .main > p { color: var(--nw-text-dim); font-size: 12px; }
+
+/* Panels: tonal surface, hairline border, square corners, no shadow */
+.shadow-box,
+body.dark .shadow-box,
+body.light .shadow-box {
+  background: var(--void-warm) !important;
+  border: 1px solid var(--nw-faint) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Kuma sets its own sans font on rows and text blocks; :where() keeps this at
+ * zero specificity so the title/stamp rules below still win. */
+.container :where(div, span, p, a, small, footer, li) {
+  font-family: 'JetBrains Mono', 'Cascadia Mono', monospace;
+}
+
+/* Overall status banner */
+.overall-status,
+.overall-status div {
+  font-family: 'Saira Extra Condensed', 'Impact', sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-left: 2px solid var(--nw-primary-dim);
+  padding-left: 1.5rem !important;
+}
+.overall-status .ok { color: var(--nw-green); }
+.overall-status .warning { color: var(--nw-yellow); }
+.overall-status .danger { color: var(--nw-red); }
+
+/* Group headers behave like Nightwire panel headers */
+h2.group-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-primary);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--nw-primary-dim);
+}
+h2.group-title .chevron { color: var(--nw-primary-dim); }
+
+/* Monitor rows */
+.monitor-list .item { border-color: var(--nw-faint) !important; }
+.monitor-list .item:hover { background: rgba(102, 153, 255, 0.08); }
+.item-name { color: var(--nw-text); font-size: 13px; }
+.extra-info, .word, .refresh-info { color: var(--nw-text-dim); font-size: 11px; }
+
+/* Badges: stamp type, square-ish */
+.badge {
+  font-family: 'Saira Extra Condensed', 'Impact', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 2px;
+}
+.badge.bg-primary { background: rgba(102, 153, 255, 0.15) !important; color: var(--nw-primary) !important; border: 1px solid var(--nw-primary-dim); }
+
+/* Footer */
+footer { color: var(--nw-text-dim); font-size: 11px; border-top: 1px solid var(--nw-faint); padding-top: 1rem; }
+footer p[data-testid="powered-by"] { opacity: 0.6; }
+
+/* Scrollbars to match */
+* { scrollbar-color: var(--nw-primary-dim) var(--void); }
