@@ -82,6 +82,25 @@ jobs:
             --entrypoint amtool prom/alertmanager:latest \
             check-config /etc/alertmanager/alertmanager.yml
 
+  alertmanager-inhibit:
+    name: alertmanager inhibit rule
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        run: shellcheck -x tests/alertmanager-inhibit.bats
+
+      - name: bats
+        # Runs the pinned Alertmanager image with the real config and checks
+        # which alerts it inhibits. Same pinned bats install as the other jobs.
+        run: |
+          git clone --quiet --depth 1 --branch v1.13.0 https://github.com/bats-core/bats-core.git "$RUNNER_TEMP/bats-core"
+          test "$(git -C "$RUNNER_TEMP/bats-core" rev-parse HEAD)" = 3bca150ec86275d6d9d5a4fd7d48ab8b6c6f3d87
+          sudo "$RUNNER_TEMP/bats-core/install.sh" /usr/local
+          bats --version
+          bats tests/alertmanager-inhibit.bats
+
   retention:
     name: docker-retention script + units
     runs-on: ubuntu-latest
