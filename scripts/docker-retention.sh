@@ -19,9 +19,10 @@
 # so the daemon itself still refuses to delete an image a container uses.
 #
 # Also, with --apply: dangling images older than MIN_AGE_HOURS
-# (`image prune --filter until=`, which compares the image BUILD date, not the
-# pull date) and build cache unused for BUILD_CACHE_UNTIL or above
-# BUILD_CACHE_MAX. It never touches containers, volumes or networks, and never
+# (`image prune --filter until=`, which Docker documents as comparing the image
+# creation time, not the pull time; not verified on the containerd image store,
+# so treat the age as approximate) and build cache unused for BUILD_CACHE_UNTIL
+# or above BUILD_CACHE_MAX. It never touches containers, volumes or networks, and never
 # runs `system prune` or `image prune -a`.
 #
 # Before each removal under --apply the script looks again: it skips an image a
