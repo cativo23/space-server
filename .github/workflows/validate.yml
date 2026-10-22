@@ -90,8 +90,13 @@ jobs:
         run: shellcheck -x scripts/docker-retention.sh tests/stub/docker tests/docker-retention.bats
 
       - name: bats
+        # The suite calls bats_require_minimum_version, which exists from
+        # bats-core 1.7.0. Distro packages can be older, so install a pinned
+        # release instead of apt's.
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq bats
+          git clone --quiet --depth 1 --branch v1.13.0 https://github.com/bats-core/bats-core.git "$RUNNER_TEMP/bats-core"
+          sudo "$RUNNER_TEMP/bats-core/install.sh" /usr/local
+          bats --version
           bats tests/docker-retention.bats
 
       - name: systemd units

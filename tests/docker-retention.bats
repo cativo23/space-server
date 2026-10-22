@@ -6,7 +6,9 @@
 #
 # bats runs each test under `set -e`, but a negated command (`! grep ...`) that
 # is not the last line of a test never fails it. Negative checks therefore use
-# `run !`, or the lacks_* helpers that return 1 explicitly.
+# `run !` (bats 1.5), or the lacks_* helpers that return 1 explicitly.
+# bats_require_minimum_version itself only exists from bats-core 1.7.0, so that is
+# the oldest bats that can run this file.
 bats_require_minimum_version 1.5.0
 
 SCRIPT="$BATS_TEST_DIRNAME/../scripts/docker-retention.sh"
