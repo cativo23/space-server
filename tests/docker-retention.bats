@@ -19,8 +19,32 @@ lacks_line() {
   if grep -qP "^$1\t$2\t.*(^|\t| )\Q$3\E( |$)" <<<"$output"; then echo "unexpected line: $*"; return 1; fi
 }
 
-# The commands that change anything on the host, in the order they were issued.
-destructive_calls() { grep -E '^(image rm|image prune|builder prune|rmi|system|volume|network|container|rm|stop|kill) ' "$CALLS" || true; }
+# The calls the script makes that only read. A call that is not in this list is
+# treated as mutating, so a command nobody thought of cannot slip through a
+# denylist: it shows up in mutating_calls and fails the tests below.
+mutating_calls() {
+  local line
+  while IFS= read -r line; do
+    case $line in
+      'ps -a --no-trunc --format '*) ;;
+      'inspect --format {{.Image}} '*) ;;
+      'image ls --no-trunc --format {{.ID}}') ;;
+      'image ls -q --no-trunc -f dangling=true') ;;
+      'image inspect --format '*) ;;
+      'builder du') ;;
+      *) printf '%s\n' "$line" ;;
+    esac
+  done < "$CALLS"
+}
+
+# Under --apply the only mutating calls allowed are an unforced `image rm <one
+# reference>` and the three prunes with their exact arguments.
+unexpected_apply_calls() {
+  mutating_calls | grep -Ev -e '^image rm [^ -][^ ]*$' \
+    -e '^image prune -f --filter until=72h$' \
+    -e '^builder prune -f --filter until=168h$' \
+    -e '^builder prune -f --max-used-space 2gb$' || true
+}
 
 setup() {
   export FIX="$BATS_TEST_TMPDIR/fix" CALLS="$BATS_TEST_TMPDIR/calls"
@@ -46,19 +70,19 @@ setup() {
 
 # --- dry-run ------------------------------------------------------------------
 
-@test "dry-run is the default and never calls a destructive subcommand" {
+@test "dry-run is the default and makes only read-only docker calls" {
   run "$SCRIPT"
   [ "$status" -eq 0 ]
   [[ "$output" == *"DRY-RUN"* ]]
   grep -q '^ps -a' "$CALLS"                    # the stub was really exercised
-  run ! grep -Eq '^(image rm|image prune|builder prune|rmi|system|volume|network|container|rm|stop|kill) ' "$CALLS"
+  [ -z "$(mutating_calls)" ]
 }
 
-@test "an explicit --dry-run never calls a destructive subcommand either" {
+@test "an explicit --dry-run makes only read-only docker calls too" {
   run "$SCRIPT" --dry-run
   [ "$status" -eq 0 ]
   grep -q '^ps -a' "$CALLS"
-  [ -z "$(destructive_calls)" ]
+  [ -z "$(mutating_calls)" ]
 }
 
 @test "keeps the newest N per repository and the image a running container uses" {
@@ -162,27 +186,27 @@ setup() {
   printf 'c3\trestarting\n' >> "$FIX/ps.tsv"; printf 'c3\tsha256:v5\n' >> "$FIX/ctr.tsv"
   run "$SCRIPT" --apply
   [ "$status" -eq 75 ]
-  [ -z "$(destructive_calls)" ]
+  [ -z "$(mutating_calls)" ]
 }
 
 @test "docker listing no containers at all stops --apply with 70" {
   : > "$FIX/ps.tsv"
   run "$SCRIPT" --apply
   [ "$status" -eq 70 ]
-  [ -z "$(destructive_calls)" ]
+  [ -z "$(mutating_calls)" ]
 }
 
 @test "containers that exist but resolve to no image exit 70, even in dry-run" {
   : > "$FIX/ctr.tsv"                            # docker inspect answers with nothing
   run "$SCRIPT"
   [ "$status" -eq 70 ]
-  [ -z "$(destructive_calls)" ]
+  [ -z "$(mutating_calls)" ]
 }
 
 @test "a failing docker inspect exits 70 instead of judging every image unused" {
   FAIL_ON='inspect --format {{.Image}}' run "$SCRIPT" --apply
   [ "$status" -eq 70 ]
-  [ -z "$(destructive_calls)" ]
+  [ -z "$(mutating_calls)" ]
 }
 
 # --- --apply ------------------------------------------------------------------
@@ -199,23 +223,21 @@ setup() {
   run "$SCRIPT" --apply
   [ "$status" -eq 0 ]
   grep -q '^image rm ' "$CALLS"
-  run ! grep -Eq '^image rm .*(-f|--force)' "$CALLS"
-  run ! grep -Eq '^(rmi|rm) ' "$CALLS"
+  [ -z "$(unexpected_apply_calls)" ]
 }
 
-@test "--apply issues exactly these destructive commands" {
+@test "--apply issues exactly these mutating commands" {
   run "$SCRIPT" --apply
   [ "$status" -eq 0 ]
   expected=$'image rm acme/app:v2\nimage rm acme/app:v3\nimage prune -f --filter until=72h\nbuilder prune -f --filter until=168h\nbuilder prune -f --max-used-space 2gb'
-  [ "$(destructive_calls)" = "$expected" ]
+  [ "$(mutating_calls)" = "$expected" ]
 }
 
-@test "--apply never prunes all images or the whole system, and leaves volumes, networks and containers alone" {
+@test "--apply changes nothing beyond unforced image removals and the three prunes" {
   run "$SCRIPT" --apply
   [ "$status" -eq 0 ]
-  run ! grep -Eq '^system ' "$CALLS"
-  run ! grep -Eq '^(image|builder) prune .*(-a|--all)( |$)' "$CALLS"
-  run ! grep -Eq '^(volume|network|container|stop|kill) ' "$CALLS"
+  [ -n "$(mutating_calls)" ]
+  [ -z "$(unexpected_apply_calls)" ]
 }
 
 @test "--apply re-checks usage before every removal" {
