@@ -191,6 +191,26 @@ setup() {
   [ ! -s "$CALLS" ]                             # nothing was asked of docker
 }
 
+@test "a COMPOSE_ROOTS entry that is not a readable directory exits 64 instead of disabling compose-ref" {
+  COMPOSE_ROOTS="$FIX/compose $FIX/not-there" run "$SCRIPT"
+  [ "$status" -eq 64 ]
+  [[ "$output" == *"$FIX/not-there"* ]]
+  [ ! -s "$CALLS" ]
+  : > "$FIX/a-file"
+  COMPOSE_ROOTS="$FIX/a-file" run "$SCRIPT" --apply
+  [ "$status" -eq 64 ]
+  [ ! -s "$CALLS" ]
+}
+
+@test "an unreadable COMPOSE_ROOTS directory exits 64" {
+  [ "$(id -u)" -ne 0 ] || skip "root can read anything"
+  mkdir "$FIX/locked"; chmod 000 "$FIX/locked"
+  COMPOSE_ROOTS="$FIX/locked" run "$SCRIPT"
+  chmod 755 "$FIX/locked"
+  [ "$status" -eq 64 ]
+  [ ! -s "$CALLS" ]
+}
+
 # --- host state that blocks a judgement ---------------------------------------
 
 @test "a container mid-transition stops --apply with 75 (deploy in flight)" {

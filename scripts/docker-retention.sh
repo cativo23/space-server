@@ -88,6 +88,18 @@ if [[ -n $PROTECT_REGEX ]]; then
   if ((rc == 2)); then echo "PROTECT_REGEX is not a valid extended regex: $PROTECT_REGEX" >&2; exit 64; fi
 fi
 
+# A root that is missing or unreadable would make the compose-ref rule see no
+# `image:` lines at all and silently protect nothing.
+if [[ -n $COMPOSE_ROOTS ]]; then
+  read -r -a roots <<<"$COMPOSE_ROOTS"
+  for root in "${roots[@]}"; do
+    if [[ ! -d $root || ! -r $root || ! -x $root ]]; then
+      echo "COMPOSE_ROOTS entry is not a readable directory: $root" >&2
+      exit 64
+    fi
+  done
+fi
+
 log() { printf '%s\n' "$*"; }
 
 if [[ $MODE == apply ]]; then
@@ -163,7 +175,6 @@ normalize_ref() {  # print the forms `docker image inspect .RepoTags` uses for t
   fi
 }
 if [[ -n $COMPOSE_ROOTS ]]; then
-  read -r -a roots <<<"$COMPOSE_ROOTS"
   while IFS= read -r line; do
     ref=$(sed -E 's/^[[:space:]]*image:[[:space:]]*//; s/[[:space:]]+#.*$//; s/^["'\'']//; s/["'\''][[:space:]]*$//' <<<"$line")
     ref=$(sed -E 's/\$\{[A-Za-z_][A-Za-z0-9_]*:?-([^}]*)\}/\1/g' <<<"$ref")
