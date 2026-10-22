@@ -179,7 +179,9 @@ services:
       - '--docker_only=true'
       - '--store_container_labels=true'
       - '--containerd=/run/containerd/containerd.sock'
-      - '--disable_metrics=disk,diskIO,tcp,udp,percpu,sched,process,hugetlb,referenced_memory,resctrl,cpu_topology,memory_numa'
+      # This list replaces cAdvisor's default one, so a group disabled by
+      # default (e.g. advtcp) has to be repeated here or it comes back on.
+      - '--disable_metrics=advtcp,disk,diskIO,tcp,udp,percpu,sched,process,hugetlb,referenced_memory,resctrl,cpu_topology,memory_numa'
     networks:
       - monitoring
     mem_limit: 256m
