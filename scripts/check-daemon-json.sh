@@ -18,8 +18,7 @@
 #
 # Usage: check-daemon-json.sh FILE
 # Exit codes: 0 ok, 1 the file is invalid, 64 usage or unreadable file, 70 jq
-# is not installed (the production host has none: run this from a machine that
-# does, or install jq there).
+# is not installed (run it where jq exists, or install jq).
 set -euo pipefail
 
 [[ $# -eq 1 ]] || { echo "usage: ${0##*/} FILE" >&2; exit 64; }

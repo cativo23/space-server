@@ -33,9 +33,8 @@ mutate() {
 }
 
 @test "should_say_jq_is_missing_instead_of_calling_the_file_invalid" {
-  # A PATH that has bash and nothing else: the script must notice there is no
-  # jq. The host this runs on in practice has none, and "not valid JSON" sends
-  # the reader after the file instead of the missing tool.
+  # A PATH that has bash and nothing else: the script must name the missing jq,
+  # not call the file invalid (which sends the reader after the file).
   mkdir "$BATS_TEST_TMPDIR/nojq"
   ln -s "$(command -v bash)" "$BATS_TEST_TMPDIR/nojq/bash"
   run env PATH="$BATS_TEST_TMPDIR/nojq" "$SCRIPT" "$REAL"

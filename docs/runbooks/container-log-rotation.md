@@ -49,8 +49,8 @@ docker ps -a --filter status=exited --filter status=created --filter status=dead
 docker ps -q | wc -l
 
 # JSON and keys, then the values dockerd does not check.
-# The value check needs jq, which the production host does not have (the script
-# exits 70 and says so): run it from a machine that has jq, on the same commit.
+# The value check needs jq (the script exits 70 and says so when it is missing):
+# run it where jq exists, on the same commit.
 sudo dockerd --validate --config-file docker/daemon.json
 scripts/check-daemon-json.sh docker/daemon.json
 
