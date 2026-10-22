@@ -13,10 +13,24 @@ bats_require_minimum_version 1.7.0
 
 ROOT="$BATS_TEST_DIRNAME/.."
 
+# need WHAT: skip when a tool is missing locally, but fail under CI, where a
+# skipped suite would leave the job green without having tested anything.
+need() {
+  command -v "$1" >/dev/null && return 0
+  if [ -n "${CI:-}" ]; then
+    echo "$1 is required in CI" >&2
+    return 1
+  fi
+  skip "$1 is not available"
+}
+
 setup_file() {
-  command -v docker >/dev/null || skip "docker is not available"
-  command -v jq >/dev/null || skip "jq is not available"
-  IMAGE=$(grep -oE 'prom/alertmanager:[^[:space:]]+' "$ROOT/docker-compose.yml" | head -n1)
+  need docker
+  need jq
+  need curl
+  # The compose file may quote the value (image: "prom/alertmanager:v1"), so
+  # strip quotes along with anything else that is not part of the reference.
+  IMAGE=$(grep -oE 'prom/alertmanager:[^[:space:]]+' "$ROOT/docker-compose.yml" | head -n1 | tr -d "\"'")
   [ -n "$IMAGE" ]
   # The container user must be able to read the config.
   DIR=$(mktemp -d)
@@ -40,7 +54,9 @@ teardown_file() {
   [ -z "${DIR:-}" ] || rm -rf "$DIR"
 }
 
-# fire NAME SEVERITY INSTANCE [MOUNTPOINT]: post one firing alert.
+# fire NAME SEVERITY INSTANCE [MOUNTPOINT]: post one firing alert. Posting the
+# same labels again only refreshes it, so every test can start by posting what
+# it needs and does not depend on the tests before it.
 fire() {
   local labels
   labels=$(jq -n --arg a "$1" --arg s "$2" --arg i "$3" --arg m "${4:-}" \
@@ -49,37 +65,68 @@ fire() {
     -d "[{\"labels\": $labels}]" >/dev/null
 }
 
-# inhibited_by ALERTNAME INSTANCE [MOUNTPOINT]: print the inhibitedBy list.
+# inhibited_by ALERTNAME INSTANCE [MOUNTPOINT]: print the inhibitedBy list, or
+# "absent" if Alertmanager does not list the alert.
 inhibited_by() {
   local m="${3:-}"
   curl -fs "$API/alerts" | jq -c --arg a "$1" --arg i "$2" --arg m "$m" \
     '[.[] | select(.labels.alertname == $a and .labels.instance == $i
-                   and (.labels.mountpoint // "") == $m)] | .[0].status.inhibitedBy'
+                   and (.labels.mountpoint // "") == $m)]
+     | if length == 0 then "absent" else .[0].status.inhibitedBy end'
+}
+
+# poll COMMAND...: run until its output is neither "absent" nor, when
+# WANT_INHIBITED is 1, an empty list; at most 10 tries, 0.5 s apart. The
+# inhibitor ingests alerts asynchronously, so one GET can race it. Leaves the
+# last output in $output.
+poll() {
+  local _
+  for _ in $(seq 1 10); do
+    output=$("$@")
+    if [ "$output" != "absent" ] && { [ "${WANT_INHIBITED:-0}" != 1 ] || [ "$output" != "[]" ]; }; then
+      return 0
+    fi
+    sleep 0.5
+  done
+  return 0
+}
+
+# settle_inhibition: post the critical disk alert and a warning for the same
+# instance and mountpoint, and wait until the warning is reported inhibited.
+# After this the inhibitor has the critical alert cached, so a negative
+# assertion that follows cannot pass merely because it has not run yet.
+settle_inhibition() {
+  fire HostDiskSpaceCritical critical node:9100 /
+  fire HostDiskSpaceLow warning node:9100 /
+  WANT_INHIBITED=1 poll inhibited_by HostDiskSpaceLow node:9100 /
+  [ "$output" != "[]" ] && [ "$output" != "absent" ]
 }
 
 @test "should_inhibit_the_warning_disk_alert_when_the_critical_one_fires_for_the_same_mountpoint" {
   fire HostDiskSpaceCritical critical node:9100 /
   fire HostDiskSpaceLow warning node:9100 /
-  run inhibited_by HostDiskSpaceLow node:9100 /
-  [ "$status" -eq 0 ]
+  WANT_INHIBITED=1 poll inhibited_by HostDiskSpaceLow node:9100 /
   [ "$output" != "[]" ]
-  [ "$output" != "null" ]
+  [ "$output" != "absent" ]
 }
 
 @test "should_not_inhibit_the_critical_alert_itself" {
-  run inhibited_by HostDiskSpaceCritical node:9100 /
+  settle_inhibition
+  poll inhibited_by HostDiskSpaceCritical node:9100 /
   [ "$output" = "[]" ]
 }
 
 @test "should_not_inhibit_the_warning_for_a_different_mountpoint" {
+  settle_inhibition
   fire HostDiskSpaceLow warning node:9100 /data
-  run inhibited_by HostDiskSpaceLow node:9100 /data
+  poll inhibited_by HostDiskSpaceLow node:9100 /data
   [ "$output" = "[]" ]
 }
 
 @test "should_not_inhibit_the_warning_for_a_different_instance" {
+  settle_inhibition
   fire HostDiskSpaceLow warning other:9100 /
-  run inhibited_by HostDiskSpaceLow other:9100 /
+  poll inhibited_by HostDiskSpaceLow other:9100 /
   [ "$output" = "[]" ]
 }
 
@@ -87,8 +134,9 @@ inhibited_by() {
   # ContainerDown is critical and has no mountpoint label; a rule that matched
   # on severity alone would swallow this warning, because a label missing on
   # both sides counts as equal.
+  settle_inhibition
   fire ContainerDown critical cadvisor:8080
   fire ContainerRestartLoop warning cadvisor:8080
-  run inhibited_by ContainerRestartLoop cadvisor:8080
+  poll inhibited_by ContainerRestartLoop cadvisor:8080
   [ "$output" = "[]" ]
 }
