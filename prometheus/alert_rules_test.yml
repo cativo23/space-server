@@ -31,3 +31,52 @@ tests:
             exp_annotations:
               summary: "Container app restarting repeatedly"
               description: "Container app has restarted more than twice in the last 15 minutes."
+
+  # 80 GB disk losing 1 GB an hour from 28 GB free: full in ~28h at that pace,
+  # so the 24h projection goes negative and the alert fires after its 1h hold.
+  # One-minute samples: a sparser series leaves the instant selector empty
+  # past its 5m lookback and keeps resetting the rule's `for`.
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{instance="node",mountpoint="/",fstype="ext4"}'
+        values: '28000000000-16666666x600'
+      - series: 'node_filesystem_size_bytes{instance="node",mountpoint="/",fstype="ext4"}'
+        values: '80000000000x600'
+    alert_rule_test:
+      - eval_time: 8h
+        alertname: HostDiskFillingFast
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: node
+              mountpoint: /
+              fstype: ext4
+            exp_annotations:
+              summary: "Disk on node (/) on course to fill within 24h"
+              description: "At the last 6h rate, / runs out of space within a day. Check `docker system df` and container log sizes."
+
+  # The growth measured before the cleanup (~0.4 GB a day at 25 GB free) is
+  # the 85% rule's job, not this one's.
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{instance="node",mountpoint="/",fstype="ext4"}'
+        values: '25000000000-277777x600'
+      - series: 'node_filesystem_size_bytes{instance="node",mountpoint="/",fstype="ext4"}'
+        values: '80000000000x600'
+    alert_rule_test:
+      - eval_time: 8h
+        alertname: HostDiskFillingFast
+        exp_alerts: []
+
+  # 5 GB an hour is steep enough to fill the disk within a day, but with 55%
+  # still free on a 200 GB disk the 40% guard keeps the alert quiet.
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{instance="node",mountpoint="/",fstype="ext4"}'
+        values: '150000000000-83333333x600'
+      - series: 'node_filesystem_size_bytes{instance="node",mountpoint="/",fstype="ext4"}'
+        values: '200000000000x600'
+    alert_rule_test:
+      - eval_time: 8h
+        alertname: HostDiskFillingFast
+        exp_alerts: []
