@@ -1,0 +1,38 @@
+[Unit]
+Description=Docker image and build-cache retention for the shared host (space-server)
+Documentation=https://github.com/cativo23/space-server/blob/main/README.md#image-retention
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+# Runs as the deploy user through the docker group: no root needed, and the
+# same identity the deploy workflows already use.
+User=cativo23
+Group=docker
+# /run/docker-retention, owned by the user above and private to it: the lock
+# file lives here (RUNTIME_DIRECTORY), not in the world-writable /run/lock.
+RuntimeDirectory=docker-retention
+RuntimeDirectoryMode=0700
+# Every stack's compose files are read for `image:` lines that must stay.
+Environment="COMPOSE_ROOTS=/home/cativo23/deploy /home/cativo23/space-server"
+Environment=KEEP_LAST=3
+Environment=MIN_AGE_HOURS=72
+Environment=BUILD_CACHE_UNTIL=168h
+Environment=BUILD_CACHE_MAX=2gb
+# Host-only overrides (PROTECT_REGEX during a rollback window, etc.).
+EnvironmentFile=-/etc/default/docker-retention
+# Dry-run until a week of plans has been read. The unit is a copy in
+# /etc/systemd/system, so changing this word to --apply takes effect only after
+# reinstalling the file and `systemctl daemon-reload`.
+ExecStart=/usr/local/sbin/docker-retention --dry-run
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=yes
+PrivateTmp=yes
+UMask=0077
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+TimeoutStartSec=30min
