@@ -211,6 +211,49 @@ Tracked in [`IMPROVEMENT-PLAN.md`](IMPROVEMENT-PLAN.md). Currently open:
 - **F46** — offsite dead-man switch so a full-host outage still alerts Discord
 - **Eventually** — Ansible playbook for full reproducibility from a fresh VPS
 
+## Image retention
+
+polaris2 is shared by every project's deploy, and each release pulls a new image tag that nothing used to delete. One host-level job owns the cleanup for all stacks, including ones added later; no deploy workflow has to remember it.
+
+**`scripts/docker-retention.sh`** runs daily at 04:30 UTC from `systemd/docker-retention.{service,timer}`. It is dry-run by default and deletes only with `--apply`. It keeps an image when:
+
+| Kept because | Rule |
+|---|---|
+| `in-use` | any container uses it, running **or stopped** (`docker ps -a`) |
+| `compose-ref` | an `image:` line in a compose file under the stacks' directories names it (`${VAR:-default}` resolves to its default) |
+| `protected` | a reference matches `PROTECT_REGEX` (set it during a rollback window) |
+| `newest-N` | it is among the `KEEP_LAST` (default 3) most recently pulled images of its repository |
+| `too-young` | it was pulled less than `MIN_AGE_HOURS` (default 72) ago |
+
+Things that are easy to get wrong:
+
+- `KEEP_LAST` counts the image in use: 3 is the current image plus 2 rollbacks. A repository that only ever has a `:latest` tag keeps no rollback copy, because the next pull replaces it.
+- Everything else is removed with `docker image rm <reference>`, never `-f`, so the daemon still refuses an image a container uses. Usage, pull time and the reference itself are checked again right before each removal, so an image a deploy or a rollback pull touched since the plan is skipped, and so is a tag that was re-pushed and now names a different image (a sliver of time remains between that last look and the removal).
+- It also prunes dangling images older than `MIN_AGE_HOURS` and build cache unused for 7 days or above 2 GB. Docker documents the dangling filter (`until=`) as an image creation time, not a pull time; how it behaves on this host's containerd image store has not been verified, so treat that age as approximate. It never runs `system prune` or `image prune -a`, and never touches volumes, networks or containers.
+- It stops instead of guessing: exit 70 when `docker ps`, `inspect` or `image ls`/`image inspect` fail or containers exist but none resolved to an image, 75 when another run holds the lock or a container is `created`/`restarting`/`removing` (a deploy in flight), 64 for a bad flag, setting, `COMPOSE_ROOTS` entry or `PROTECT_REGEX`, 1 when a removal or a prune failed.
+- Repositories that no container uses are listed as `NO-CONTAINER` for their owner to decide; they are not removed.
+- **Nothing alerts when the unit fails.** Check `systemctl status docker-retention.service` and `journalctl -u docker-retention` after changing anything here.
+
+Install once on the host, as the deploy user (the script and the units are copies, not links into the checkout):
+
+```bash
+cd ~/space-server
+sudo install -m 0755 scripts/docker-retention.sh /usr/local/sbin/docker-retention
+sudo install -m 0644 systemd/docker-retention.service systemd/docker-retention.timer /etc/systemd/system/
+systemd-analyze verify /etc/systemd/system/docker-retention.{service,timer}
+sudo systemctl daemon-reload && sudo systemctl enable --now docker-retention.timer
+sudo systemctl start docker-retention.service    # one dry-run now
+journalctl -u docker-retention -n 80
+```
+
+After a `git pull`, repeat the `install` lines to update the copies. Host-only overrides go in `/etc/default/docker-retention` (see `systemd/docker-retention.default.example`).
+
+**Going from dry-run to apply.** The unit ships with `--dry-run`. After a week of plans in the journal look right (every run exit 0, every `REMOVE` a superseded versioned tag), change that word to `--apply` in a PR, then on the host reinstall the unit, `sudo systemctl daemon-reload`, and run the first apply with `sudo systemctl start docker-retention.service`, never by calling the script with `sudo`: the unit supplies the deploy user and the private lock directory, which a hand-run `--apply` does not have (it refuses to guess a lock path). If you must run `--apply` by hand, give it its own `DOCKER_RETENTION_LOCK`; that lock does not exclude the timer, because the unit's lock directory exists only while the unit runs. systemd itself never runs the oneshot unit twice at once, so the rule stays: go through `systemctl start`.
+
+**Rollback.** `sudo systemctl disable --now docker-retention.timer` stops it. An image removed by mistake comes back with `docker pull <reference>` only if it came from a registry. An image built on the host cannot be pulled back; the job never removes one that is the only tag of its repository (`newest-N` keeps it), which is the case for locally built `:latest` images, but a rebuild is the only way back if one is removed anyway.
+
+Tests: `bats tests/docker-retention.bats` (bats-core 1.7 or newer; CI installs the pinned v1.13.0) runs the script against a stub `docker` and checks, among other things, that dry-run never issues a destructive command and that `--apply` issues only the expected ones. CI also runs shellcheck on the script and the tests, and `systemd-analyze verify` on the units.
+
 ## Repo structure
 
 ```
@@ -223,7 +266,9 @@ space-server/
 ├── grafana/                    # Provisioned datasource + dashboards
 ├── dozzle/                     # Live container logs UI
 ├── uptime-kuma/                # External uptime probes
-├── scripts/                    # Migration automation
+├── scripts/                    # Migration automation + docker-retention.sh
+├── systemd/                    # Host timers (docker-retention)
+├── tests/                      # bats suite and docker stub for docker-retention
 ├── IMPROVEMENT-PLAN.md         # Architecture roadmap (active)
 └── CHANGELOG.md                # Keep-a-Changelog format
 ```

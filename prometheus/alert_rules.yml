@@ -20,6 +20,20 @@ groups:
           summary: "Disk >95% on {{ $labels.instance }} ({{ $labels.mountpoint }})"
           description: "Filesystem {{ $labels.mountpoint }} is at {{ $value | humanizePercentage }}. Imminent failure risk."
 
+      - alert: HostDiskFillingFast
+        # Complements the 85%/95% thresholds: catches a burst (a log storm, a
+        # run of image pulls) by its slope, a day before the disk is full.
+        # The 40% guard keeps a large, mostly empty disk from paging on noise.
+        expr: |
+          predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}[6h], 24 * 3600) < 0
+          and node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes < 0.40
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk on {{ $labels.instance }} ({{ $labels.mountpoint }}) on course to fill within 24h"
+          description: "At the last 6h rate, {{ $labels.mountpoint }} runs out of space within a day. Check `docker system df` and container log sizes."
+
       - alert: HostMemoryHigh
         expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.90
         for: 15m

@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Test double for the docker CLI. Answers from fixture files in $FIX and
+# records every invocation in $CALLS so tests can assert what was (not) run.
+#
+# It is strict about the invocations it understands: a --format string or flag
+# other than the exact ones the script uses exits 99, so a stub that ignores the
+# template cannot hide a template the real docker would reject or format
+# differently. Fixtures mimic what docker prints (LastTagTime as Go formats a
+# time, Created as RFC3339).
+#
+# A second or later call of the same kind reads "<fixture>.later" when it
+# exists, which lets a test change the host between the plan and the apply.
+# FAIL_ON makes any call whose arguments contain that text exit 1.
+printf '%s\n' "$*" >> "$CALLS"
+
+if [[ -n ${FAIL_ON:-} && "$*" == *"$FAIL_ON"* ]]; then
+  echo "stub: forced failure: docker $*" >&2
+  exit 1
+fi
+
+IMAGE_FORMAT='{{.Id}}|{{range .RepoTags}}{{.}} {{end}}|{{.Metadata.LastTagTime}}|{{.Created}}|{{.Size}}'
+
+# want ACTUAL EXPECTED: refuse any invocation shape the script is not known to use.
+want() {
+  [[ "$1" == "$2" ]] && return 0
+  echo "stub: unexpected docker invocation: docker $*" >&2
+  exit 99
+}
+
+# fixture NAME CALL-PREFIX: path of the fixture this call should read.
+fixture() {
+  local n
+  n=$(grep -c "^$2" "$CALLS" || true)
+  if ((n >= 2)) && [[ -f $FIX/$1.later ]]; then printf '%s' "$FIX/$1.later"; else printf '%s' "$FIX/$1"; fi
+}
+
+case "$1 $2" in
+  "ps -a")
+    want "$*" 'ps -a --no-trunc --format {{.ID}}{{"\t"}}{{.State}}'
+    cat "$(fixture ps.tsv 'ps ')" ;;
+  "inspect --format")
+    want "${*:1:3}" 'inspect --format {{.Image}}'
+    f=$(fixture ctr.tsv 'inspect '); shift 3; for c in "$@"; do awk -F'\t' -v c="$c" '$1==c{print $2}' "$f"; done ;;
+  "image ls")
+    if [[ "$*" == *dangling=true* ]]; then
+      want "$*" 'image ls -q --no-trunc -f dangling=true'
+      cat "$FIX/dangling.txt" 2>/dev/null || true
+    else
+      want "$*" 'image ls --no-trunc --format {{.ID}}'
+      cut -d'|' -f1 "$FIX/images.txt"
+    fi ;;
+  "image inspect")
+    want "${*:1:4}" "image inspect --format $IMAGE_FORMAT"
+    f=$(fixture images.txt 'image inspect '); shift 4; for i in "$@"; do awk -F'|' -v i="$i" '$1==i' "$f"; done ;;
+  "image rm")         echo "Untagged: $3" ;;
+  "image prune")      echo "Total reclaimed space: 0B" ;;
+  "builder du")       printf 'Reclaimable:\t838.6MB\nTotal:\t\t838.6MB\n' ;;
+  "builder prune")    echo "Total:	0B" ;;
+  *) echo "stub: unexpected docker $*" >&2; exit 99 ;;
+esac

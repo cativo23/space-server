@@ -10,6 +10,9 @@ on:
       - "traefik/**"
       - "grafana/**"
       - ".github/workflows/validate.yml"
+      - "scripts/docker-retention.sh"
+      - "tests/**"
+      - "systemd/**"
   pull_request:
     paths:
       - "**/docker-compose.yml"
@@ -17,6 +20,10 @@ on:
       - "alertmanager/**"
       - "traefik/**"
       - "grafana/**"
+      - ".github/workflows/validate.yml"
+      - "scripts/docker-retention.sh"
+      - "tests/**"
+      - "systemd/**"
 
 jobs:
   compose:
@@ -70,3 +77,34 @@ jobs:
           docker run --rm -v "$PWD/alertmanager":/etc/alertmanager \
             --entrypoint amtool prom/alertmanager:latest \
             check-config /etc/alertmanager/alertmanager.yml
+
+  retention:
+    name: docker-retention script + units
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        # The .bats files are included: a `! grep` that can never fail is
+        # exactly the kind of thing it flags.
+        run: shellcheck -x scripts/docker-retention.sh tests/stub/docker tests/docker-retention.bats
+
+      - name: bats
+        # The suite calls bats_require_minimum_version, which exists from
+        # bats-core 1.7.0. Distro packages can be older, so install a pinned
+        # release instead of apt's.
+        run: |
+          git clone --quiet --depth 1 --branch v1.13.0 https://github.com/bats-core/bats-core.git "$RUNNER_TEMP/bats-core"
+          # A tag can be moved; the commit it pointed at when it was reviewed cannot.
+          test "$(git -C "$RUNNER_TEMP/bats-core" rev-parse HEAD)" = 3bca150ec86275d6d9d5a4fd7d48ab8b6c6f3d87
+          sudo "$RUNNER_TEMP/bats-core/install.sh" /usr/local
+          bats --version
+          bats tests/docker-retention.bats
+
+      - name: systemd units
+        # ExecStart points at the install location, which does not exist on the
+        # runner: that one warning is expected, anything else fails the job.
+        run: |
+          out=$(systemd-analyze verify systemd/docker-retention.timer systemd/docker-retention.service 2>&1 || true)
+          unexpected=$(grep -v 'docker-retention.service: Command /usr/local/sbin/docker-retention is not executable' <<<"$out" || true)
+          [ -z "$unexpected" ] || { echo "$unexpected"; exit 1; }

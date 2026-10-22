@@ -1,0 +1,10 @@
+# /etc/default/docker-retention — host-only overrides, read by docker-retention.service.
+# Not secret. Copy without .example; every line is optional.
+
+# Hold references back during a rollback window (extended regex on repo:tag or repo@digest).
+# An invalid regex stops the run with exit 64.
+#PROTECT_REGEX='^(ghost|mysql)[:@]'
+
+# Newest images kept per repository, the one in use included: 3 is the current
+# image plus 2 rollbacks. 1 keeps only the current one; 0 is refused.
+#KEEP_LAST=3
