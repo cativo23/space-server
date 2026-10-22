@@ -154,7 +154,10 @@ services:
       - monitoring
     mem_limit: 64m
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9100/metrics"]
+      # `/` (landing page), not `/metrics --spider`: --spider closes the
+      # connection mid-body, so node-exporter logs an ERROR per metric family
+      # on every check, and a probe should not run every collector.
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:9100/"]
       interval: 30s
       timeout: 5s
       retries: 3
