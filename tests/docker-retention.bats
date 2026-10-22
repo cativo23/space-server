@@ -184,6 +184,16 @@ setup() {
   [ "$status" -eq 64 ]
 }
 
+@test "--keep and --min-age-hours without a value exit 64, not 1" {
+  run "$SCRIPT" --keep
+  [ "$status" -eq 64 ]
+  run "$SCRIPT" --min-age-hours
+  [ "$status" -eq 64 ]
+  run "$SCRIPT" --apply --keep
+  [ "$status" -eq 64 ]
+  [ ! -s "$CALLS" ]
+}
+
 @test "an invalid PROTECT_REGEX exits 64 at startup instead of protecting nothing" {
   PROTECT_REGEX='^(acme' run "$SCRIPT" --apply
   [ "$status" -eq 64 ]
@@ -236,6 +246,14 @@ setup() {
 
 @test "a failing docker inspect exits 70 instead of judging every image unused" {
   FAIL_ON='inspect --format {{.Image}}' run "$SCRIPT" --apply
+  [ "$status" -eq 70 ]
+  [ -z "$(mutating_calls)" ]
+}
+
+@test "a failing docker image ls of the dangling images exits 70, not 1" {
+  FAIL_ON='image ls -q' run "$SCRIPT"
+  [ "$status" -eq 70 ]
+  FAIL_ON='image ls -q' run "$SCRIPT" --apply
   [ "$status" -eq 70 ]
   [ -z "$(mutating_calls)" ]
 }
@@ -342,6 +360,13 @@ setup() {
   run "$SCRIPT" --apply
   exec 8>&-
   [ "$status" -eq 75 ]
+  [ ! -s "$CALLS" ]
+}
+
+@test "--apply exits 64 when the lock file cannot be opened" {
+  DOCKER_RETENTION_LOCK="$BATS_TEST_TMPDIR/no-such-dir/lock" run "$SCRIPT" --apply
+  [ "$status" -eq 64 ]
+  [[ "$output" == *"no-such-dir/lock"* ]]
   [ ! -s "$CALLS" ]
 }
 

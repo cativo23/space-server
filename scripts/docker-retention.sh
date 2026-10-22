@@ -70,8 +70,10 @@ while (($#)); do
   case "$1" in
     --dry-run) MODE=dry-run ;;
     --apply) MODE=apply ;;
-    --keep) KEEP_LAST=${2:-}; shift ;;
-    --min-age-hours) MIN_AGE_HOURS=${2:-}; shift ;;
+    --keep|--min-age-hours)
+      if (($# < 2)); then echo "$1 needs a value" >&2; exit 64; fi
+      if [[ $1 == --keep ]]; then KEEP_LAST=$2; else MIN_AGE_HOURS=$2; fi
+      shift ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; exit 64 ;;
   esac
@@ -111,7 +113,7 @@ if [[ $MODE == apply ]]; then
       exit 64
     fi
   fi
-  exec 9>"$LOCK"
+  if ! { exec 9>"$LOCK"; } 2>/dev/null; then echo "cannot open the lock file $LOCK" >&2; exit 64; fi
   flock -n 9 || { log "another docker-retention run holds $LOCK; exiting"; exit 75; }
 fi
 
@@ -264,7 +266,9 @@ for repo in $(printf '%s\n' "${!REPO_IDS[@]}" | sort); do
   ((used)) || log "NO-CONTAINER"$'\t'"$repo"$'\t'"(owner decides; not removed)"
 done
 
-dangling=$(docker image ls -q --no-trunc -f dangling=true | sort -u | wc -l)
+dangling_out=$(docker image ls -q --no-trunc -f dangling=true) \
+  || { log "docker image ls (dangling) failed"; exit 70; }
+dangling=$(sed '/^$/d' <<<"$dangling_out" | sort -u | wc -l)
 log "remove: ${#remove_ids[@]} image(s), up to $((remove_bytes / 1000000)) MB (shared layers make the real gain smaller); dangling images: $dangling"
 log "build cache: $(docker builder du 2>/dev/null | awk -F'\t+' '/^Total/{print $2}' | tr -d ' ') total; prune would drop entries unused > $BUILD_CACHE_UNTIL, then trim to $BUILD_CACHE_MAX"
 
