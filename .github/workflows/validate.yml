@@ -95,6 +95,8 @@ jobs:
         # release instead of apt's.
         run: |
           git clone --quiet --depth 1 --branch v1.13.0 https://github.com/bats-core/bats-core.git "$RUNNER_TEMP/bats-core"
+          # A tag can be moved; the commit it pointed at when it was reviewed cannot.
+          test "$(git -C "$RUNNER_TEMP/bats-core" rev-parse HEAD)" = 3bca150ec86275d6d9d5a4fd7d48ab8b6c6f3d87
           sudo "$RUNNER_TEMP/bats-core/install.sh" /usr/local
           bats --version
           bats tests/docker-retention.bats

@@ -8,8 +8,8 @@
 # is not the last line of a test never fails it. Negative checks therefore use
 # `run !` (bats 1.5), or the lacks_* helpers that return 1 explicitly.
 # bats_require_minimum_version itself only exists from bats-core 1.7.0, so that is
-# the oldest bats that can run this file.
-bats_require_minimum_version 1.5.0
+# the oldest bats that can run this file (CI installs v1.13.0).
+bats_require_minimum_version 1.7.0
 
 SCRIPT="$BATS_TEST_DIRNAME/../scripts/docker-retention.sh"
 
