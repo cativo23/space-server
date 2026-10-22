@@ -26,8 +26,9 @@ EnvironmentFile=-/etc/default/docker-retention
 # /etc/systemd/system, so changing this word to --apply takes effect only after
 # reinstalling the file and `systemctl daemon-reload`.
 ExecStart=/usr/local/sbin/docker-retention --dry-run
-Nice=10
-IOSchedulingClass=idle
+# The work happens in dockerd, not in this process, so CPU and I/O priority
+# settings here would change nothing. What follows only denies things a docker
+# CLI client never needs; UMask keeps the lock file private.
 NoNewPrivileges=yes
 PrivateTmp=yes
 UMask=0077
