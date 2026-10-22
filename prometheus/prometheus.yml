@@ -26,6 +26,11 @@ scrape_configs:
       - targets: ["node-exporter:9100"]
 
   - job_name: "cadvisor"
+    # cAdvisor refreshes its own samples every 30-60 s (housekeeping_interval
+    # plus dynamic backoff), so scraping at 15 s mostly re-reads duplicates.
+    # A scrape takes 4-5 s and peaks near 12 s, past the default 10 s timeout.
+    scrape_interval: 30s
+    scrape_timeout: 20s
     static_configs:
       - targets: ["cadvisor:8080"]
 
