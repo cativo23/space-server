@@ -95,6 +95,8 @@ fi
 # `image:` lines at all and silently protect nothing.
 if [[ -n $COMPOSE_ROOTS ]]; then
   read -r -a roots <<<"$COMPOSE_ROOTS"
+  # Whitespace only: no roots, and find with no path would scan the current directory.
+  if ((${#roots[@]} == 0)); then echo "COMPOSE_ROOTS holds no directory" >&2; exit 64; fi
   for root in "${roots[@]}"; do
     if [[ ! -d $root || ! -r $root || ! -x $root ]]; then
       echo "COMPOSE_ROOTS entry is not a readable directory: $root" >&2

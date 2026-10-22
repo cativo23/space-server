@@ -226,6 +226,12 @@ setup() {
   [ ! -s "$CALLS" ]
 }
 
+@test "a COMPOSE_ROOTS of only whitespace exits 64 instead of scanning the current directory" {
+  COMPOSE_ROOTS="  " run "$SCRIPT"
+  [ "$status" -eq 64 ]
+  [ ! -s "$CALLS" ]
+}
+
 @test "an unreadable COMPOSE_ROOTS directory exits 64" {
   [ "$(id -u)" -ne 0 ] || skip "root can read anything"
   mkdir "$FIX/locked"; chmod 000 "$FIX/locked"
