@@ -4,11 +4,16 @@
 # `dockerd --validate` checks that the file parses and that its top-level keys
 # exist, but it accepts any log-opts key and any log-opts value (max-file "abc"
 # and an invented key both pass). This script checks what it leaves out:
-#   - the file is JSON and an object
+#   - the file is exactly one JSON object (dockerd rejects two documents in a
+#     row, which jq alone would accept one after the other)
 #   - the only top-level keys are live-restore, log-driver and log-opts
 #   - live-restore is true and log-driver is "json-file"
 #   - log-opts holds exactly max-size and max-file, both strings
-#   - max-size is a positive integer plus k, m or g; max-file a positive integer
+#   - max-size is a positive integer plus a k, m or g unit (any case, as Docker
+#     takes it); max-file is a positive integer
+# max-size is a deliberate subset of what Docker accepts: no decimals, no `b`
+# suffix and no bare bytes (a bare `10` means 10 bytes, almost never intended),
+# no 0 and no leading zeros. Widen it here and in the tests if that changes.
 # Every problem is printed, not just the first.
 #
 # Usage: check-daemon-json.sh FILE
@@ -22,8 +27,8 @@ FILE=$1
 problems=0
 fail() { echo "$FILE: $*"; problems=$((problems + 1)); }
 
-jq -e 'type == "object"' "$FILE" >/dev/null 2>&1 || {
-  echo "$FILE: not valid JSON (or not a JSON object)"
+jq -s -e 'length == 1 and (.[0] | type == "object")' "$FILE" >/dev/null 2>&1 || {
+  echo "$FILE: not valid JSON (or not exactly one JSON object)"
   exit 1
 }
 
@@ -42,7 +47,7 @@ if jq -e '.["log-opts"] | type == "object"' "$FILE" >/dev/null; then
 
   # \A and \z anchor the whole string: `$` would also match before a trailing
   # newline, and a value like "10m\n" is not the exact shape we want.
-  jq -e '.["log-opts"]["max-size"] | type == "string" and test("\\A[1-9][0-9]*[kmg]\\z")' "$FILE" >/dev/null ||
+  jq -e '.["log-opts"]["max-size"] | type == "string" and test("\\A[1-9][0-9]*[kKmMgG]\\z")' "$FILE" >/dev/null ||
     fail 'log-opts max-size must be a string like "10m" (positive integer, then k, m or g)'
   jq -e '.["log-opts"]["max-file"] | type == "string" and test("\\A[1-9][0-9]*\\z")' "$FILE" >/dev/null ||
     fail 'log-opts max-file must be a string holding a positive integer'

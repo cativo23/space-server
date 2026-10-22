@@ -63,13 +63,47 @@ mutate() {
   [[ $output == *"max-size"* ]]
 }
 
-@test "should_reject_a_max_size_with_a_bad_unit_or_garbage" {
+@test "should_accept_upper_case_size_units_that_docker_accepts" {
+  local ok
+  for ok in 10M 512K 1G 10m; do
+    jq --arg v "$ok" '.["log-opts"]["max-size"] = $v' "$REAL" > "$CONF"
+    run "$SCRIPT" "$CONF"
+    [ "$status" -eq 0 ] || { echo "rejected max-size '$ok'"; return 1; }
+  done
+}
+
+@test "house_style_should_reject_sizes_docker_takes_but_we_do_not_use" {
+  # Docker also takes decimals, a b suffix and bare bytes; this repo's
+  # subset is a positive integer plus k, m or g. A bare 10 would mean 10 bytes.
   local bad
-  for bad in 10mb abc 10M "-1m" "1.5m" "" "m" 0m 010m; do
+  for bad in 10mb 10b 1.5m 10 4096; do
     jq --arg v "$bad" '.["log-opts"]["max-size"] = $v' "$REAL" > "$CONF"
     run "$SCRIPT" "$CONF"
     [ "$status" -eq 1 ] || { echo "accepted max-size '$bad'"; return 1; }
   done
+}
+
+@test "should_reject_a_max_size_that_is_not_a_size" {
+  local bad
+  for bad in abc "-1m" "" "m" 0m 010m; do
+    jq --arg v "$bad" '.["log-opts"]["max-size"] = $v' "$REAL" > "$CONF"
+    run "$SCRIPT" "$CONF"
+    [ "$status" -eq 1 ] || { echo "accepted max-size '$bad'"; return 1; }
+  done
+}
+
+@test "should_reject_two_json_documents_in_one_file" {
+  # dockerd rejects this; jq alone would check each document in turn.
+  { cat "$REAL"; cat "$REAL"; } > "$CONF"
+  run "$SCRIPT" "$CONF"
+  [ "$status" -eq 1 ]
+  [[ $output == *"not valid JSON"* ]]
+}
+
+@test "should_reject_a_valid_document_followed_by_garbage" {
+  { cat "$REAL"; echo '{'; } > "$CONF"
+  run "$SCRIPT" "$CONF"
+  [ "$status" -eq 1 ]
 }
 
 @test "should_reject_a_non_numeric_max_file" {
