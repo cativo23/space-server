@@ -11,6 +11,8 @@ on:
       - "grafana/**"
       - ".github/workflows/validate.yml"
       - "scripts/docker-retention.sh"
+      - "scripts/check-daemon-json.sh"
+      - "docker/**"
       - "tests/**"
       - "systemd/**"
   pull_request:
@@ -22,6 +24,8 @@ on:
       - "grafana/**"
       - ".github/workflows/validate.yml"
       - "scripts/docker-retention.sh"
+      - "scripts/check-daemon-json.sh"
+      - "docker/**"
       - "tests/**"
       - "systemd/**"
 
@@ -108,3 +112,40 @@ jobs:
           out=$(systemd-analyze verify systemd/docker-retention.timer systemd/docker-retention.service 2>&1 || true)
           unexpected=$(grep -v 'docker-retention.service: Command /usr/local/sbin/docker-retention is not executable' <<<"$out" || true)
           [ -z "$unexpected" ] || { echo "$unexpected"; exit 1; }
+
+  daemon-json:
+    name: docker/daemon.json
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        run: shellcheck -x scripts/check-daemon-json.sh tests/daemon-json.bats
+
+      - name: bats
+        # Same pinned install as the retention job; the suite needs bats 1.7.0+.
+        run: |
+          git clone --quiet --depth 1 --branch v1.13.0 https://github.com/bats-core/bats-core.git "$RUNNER_TEMP/bats-core"
+          test "$(git -C "$RUNNER_TEMP/bats-core" rev-parse HEAD)" = 3bca150ec86275d6d9d5a4fd7d48ab8b6c6f3d87
+          sudo "$RUNNER_TEMP/bats-core/install.sh" /usr/local
+          bats --version
+          bats tests/daemon-json.bats
+
+      - name: valid JSON
+        run: jq -e . docker/daemon.json >/dev/null
+
+      - name: dockerd --validate
+        # Checks that the file parses and that its keys are known. It does NOT
+        # check log-opts values or keys (it accepts max-file "abc"), which is
+        # what the next step is for. The runner image normally ships dockerd;
+        # if it ever stops doing so, this step says so and passes, because the
+        # value check below does not depend on it.
+        run: |
+          if command -v dockerd >/dev/null; then
+            sudo dockerd --validate --config-file docker/daemon.json
+          else
+            echo "::warning::dockerd is not installed on this runner; skipped dockerd --validate"
+          fi
+
+      - name: log-opt values
+        run: scripts/check-daemon-json.sh docker/daemon.json
