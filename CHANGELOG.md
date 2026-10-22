@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — disk hygiene: image retention, log caps, fill-rate alert (2026-10-22)
+
+- **Image retention** (PR #32): `scripts/docker-retention.sh` with `systemd/docker-retention.{service,timer}` removes superseded image tags, keeping the last 3 per repository and never an image a container uses. The timer runs in dry-run mode; `--apply` is a later, separate change. The old tags piled up because deploys only ran `docker image prune -f`.
+- **`HostDiskFillingFast`** (PR #32): slope alert for a disk that will fill soon even though it is under the 85% threshold.
+- **Container log rotation** (PR #33, #34): `docker/daemon.json` caps every new container's `json-file` log at 10 MB × 5 and enables `live-restore`, so the daemon restart that applies it does not stop containers. `scripts/check-daemon-json.sh` validates the values, which `dockerd --validate` does not, and exits 70 when `jq` is missing. Runbook: `docs/runbooks/container-log-rotation.md`. Existing containers keep their old log config until recreated.
+- Effect on the host: root disk 90% → 64% after the old images and the build cache were removed; three retired projects were removed from the server.
+
+### Changed — monitoring costs less and the disk alerts stack correctly (2026-10-22)
+
+- **cAdvisor no longer exports `advtcp`** (PR #35): 61% of the samples of every scrape, read by no dashboard or alert. With the 30 s interval and 20 s timeout (PR #36) the scrape went from 3.2 s to 1.4 s and from 7,620 to 2,967 samples.
+- **node-exporter healthcheck probes `/`** (PR #37) instead of `/metrics --spider`, which logged a broken-pipe error on every probe.
+- **`HostDiskSpaceCritical` inhibits `HostDiskSpaceLow` and `HostDiskFillingFast`** (PR #38) by explicit alert name, equal on instance and mountpoint. `tests/alertmanager-inhibit.bats` runs the pinned Alertmanager to prove it, in the new `alertmanager inhibit rule` CI job.
+
 ### Changed — the blog moves to Ghost 6.72 and MySQL 8.4 LTS (2026-10-21)
 
 - **`deploy/ghost` now runs `ghost:6.72.0-alpine` and `mysql:8.4.11`**, both pinned by digest (F15, F35). Ghost 5 (EOL Jan 2026) and MySQL 8.0 (EOL 2026-04-30) are gone from production. Cutover took 79 s: 75 tables, 1410 rows and 73 foreign keys identical, 361 → 506 migrations, 22 posts served, 89 content files with matching checksums.

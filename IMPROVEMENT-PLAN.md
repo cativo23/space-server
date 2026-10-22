@@ -92,12 +92,21 @@ Done:
 - [x] **F55. HTTP/3 on Traefik** (PR #16, 2026-10-20). `websecure` serves QUIC on UDP 443; ufw has `443/udp` open. See F40 for the Cloud Firewall side.
 - [x] **README and runbooks aligned with production** (PR #18): VPN-gated admin UIs, real container count, closed roadmap items.
 
+- [x] **F56. Disk alerts.** The threshold alerts already existed (`HostDiskSpaceLow` at 85%, `HostDiskSpaceCritical` at 95%) and `HostDiskSpaceLow` fired for about a day at 90%. What was missing was the fill rate: `HostDiskFillingFast` (slope) was added in PR #32, and the critical alert now inhibits both warning-level ones (PR #38, tested against the pinned Alertmanager in CI).
+- [x] **F60. Disk growth: old image tags and uncapped container logs.** Deploys ran `docker image prune -f`, which only removes untagged images, so every release left its old tag behind (86 unused images and the build cache were removed by hand, 90% → 64%). PR #32 adds `scripts/docker-retention.sh` and a daily systemd timer (keeps the last 3 tags per repository, dry-run by default; switching it to `--apply` is a separate change after a week of logs). PR #33 sets `docker/daemon.json` to `json-file` 10 MB × 5 with `live-restore`; see `docs/runbooks/container-log-rotation.md`. Containers created before the change keep their old log config until they are recreated.
+- [x] **F61. cAdvisor cost.** `--disable_metrics` replaces cAdvisor's default list, so `advtcp` stayed on and made 61% of the samples of every scrape while nothing read it (PR #35). cAdvisor is now scraped every 30 s with a 20 s timeout (PR #36). Measured: scrape 3.2 s → 1.4 s, samples per scrape 7,620 → 2,967. node-exporter's healthcheck probes `/` instead of `/metrics --spider`, which logged a broken-pipe error per probe (PR #37).
+
 Open:
 
-- [ ] **F56. No disk alert.** `/` on polaris2 was at 79% (57G of 75G) with no alert on it. Add a threshold rule next to the existing host alerts.
-- [ ] **F57. Workloads on the host that this repo does not manage or record.** 49 containers run; clarify, nova-id (Ory), tcg-vault/binder/guides, linx-el-salvador, paldea-guide and pokemon-guide are not in this repo, and `deploy/linx-el-salvador/` sits untracked in the server's checkout. Decide per stack: bring into `deploy/` (as F3 did) or document as out of scope.
+- [ ] **F57. Workloads on the host that this repo does not manage or record.** 46 containers run; clarify, nova-id (Ory), tcg-vault/binder/guides, linx-el-salvador, paldea-guide and pokemon-guide are not in this repo, and `deploy/linx-el-salvador/` sits untracked in the server's checkout. Decide per stack: bring into `deploy/` (as F3 did) or document as out of scope.
 - [ ] **F58. `id.cativo.dev` has no monitor.** Oathkeeper answers 404 on `/`, so it needs a real health endpoint before it can be probed.
 - [ ] **F59. Host reports its hostname as `polairs2`.** Letters transposed; cosmetic, but it shows up in `node_exporter` labels and logs. Confirm before renaming.
+- [ ] **F62. `ContainerDown` cannot fire.** `time() - container_last_seen{name!=""} > 300` needs a series that still exists, but cAdvisor stops exporting a stopped container's series, so the expression never matches. It did not fire in 30 days, including with three containers stopped for hours. Rewrite it on a metric that survives a stop, or alert on the absence of a known container.
+- [ ] **F63. Nothing alerts when `docker-retention.service` fails.** The script exits 64, 70 or 75 on bad config, an unreadable inspect or a held lock; a failed unit is only visible in the journal.
+- [ ] **F64. Alerts that do not exist yet.** Container memory near its limit (cAdvisor and Prometheus both sat at 92–100% of theirs before F61), cAdvisor scrape duration, host swap-in, CPU throttling and OOM kills.
+- [ ] **F65. Loki and Promtail are not scraped by Prometheus.** Five panels of the `loki-operational` dashboard are empty because of it.
+- [ ] **F66. Promtail housekeeping.** `docker_sd` refreshes every 5 s (30–60 s is enough) and its positions file lives in the container's own `/tmp`, so recreating the container may re-ship logs (untested); give it a named volume before recreating it.
+- [ ] **F67. Stale blog deploy folder.** The old blog deploy directory on the host still names Ghost 5 and MySQL 8.0, whose rollback images are no longer present. A rollback before 2026-10-28 needs a pull of the pinned digests, then the folder should go.
 
 ## Notes for future sessions
 
