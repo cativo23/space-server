@@ -140,11 +140,23 @@ setup() {
   has_line REMOVE superseded acme/app:v3
 }
 
+@test "a LastTagTime in RFC3339 form (containerd hosts) is read as the pull date, not Created" {
+  # v2 was built in September but pulled again yesterday: only LastTagTime says so.
+  sed -i 's/^sha256:v2|acme\/app:v2 |[^|]*|/sha256:v2|acme\/app:v2 |2026-10-21T02:30:22.366906515Z|/' "$FIX/images.txt"
+  sed -i 's/^\(sha256:v5|acme\/app:v5 |\)2026-10-10 00:00:00/\12026-10-22 01:00:00/' "$FIX/images.txt"
+  KEEP_LAST=1 run "$SCRIPT"
+  has_line KEEP too-young acme/app:v2
+}
+
 @test "a dangling image (empty refs field) is neither judged nor mistaken for a repository" {
   # What docker prints for an untagged image: refs empty, LastTagTime the zero time.
   printf 'sha256:dang||0001-01-01 00:00:00 +0000 UTC|2026-08-01T00:00:00.803283863Z|700000000\n' >> "$FIX/images.txt"
+  # A second one as containerd hosts print it: a recent LastTagTime in RFC3339 form, refs empty.
+  printf 'sha256:dang2||2026-10-21T22:00:00.366906515Z|2026-10-21T21:00:00.803283863Z|1\n' >> "$FIX/images.txt"
+  printf 'sha256:dang\n\nsha256:dang2\n' > "$FIX/dangling.txt"     # a blank line must not count
   run "$SCRIPT"
   [ "$status" -eq 0 ]
+  [[ "$output" == *"dangling images: 2"* ]]
   # `run` replaces $output, so judge the script's output, not that of a later command.
   [[ "$output" == *"images=6 "* ]]            # the six tagged images, not the dangling one
   [[ "$output" != *UTC* ]]                     # a shifted column would surface a timestamp word as a repository
@@ -343,6 +355,15 @@ setup() {
   [[ "$output" == *"skip (moved): acme/app:stable"* ]]
   grep -qx 'image rm acme/app:v2' "$CALLS"
   run ! grep -qx 'image rm acme/app:stable' "$CALLS"
+}
+
+@test "an image that disappeared after the plan is skipped as gone" {
+  grep -v '^sha256:v2|' "$FIX/images.txt" > "$FIX/images.txt.later"
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"skip (gone): acme/app:v2"* ]]
+  run ! grep -qx 'image rm acme/app:v2' "$CALLS"
+  grep -qx 'image rm acme/app:v3' "$CALLS"
 }
 
 @test "a failing image rm exits 1 and the loop carries on" {
