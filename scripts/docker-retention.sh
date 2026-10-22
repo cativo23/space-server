@@ -25,8 +25,11 @@
 # runs `system prune` or `image prune -a`.
 #
 # Before each removal under --apply the script looks again: it skips an image a
-# container started using since the plan, and one pulled again since the plan
-# (a rollback pull).
+# container started using since the plan, one pulled again since the plan (a
+# rollback pull), and any reference that no longer names the planned image (a
+# tag re-pushed and pulled meanwhile). A sliver of time remains between that
+# last look and the `image rm` itself; the daemon's own refusal of an image in
+# use is the backstop for containers, not for a re-pulled tag.
 #
 # Settings come from the environment (systemd: EnvironmentFile=), flags win.
 # --apply takes a lock, by default $RUNTIME_DIRECTORY/lock (systemd
@@ -260,23 +263,28 @@ if [[ $MODE != apply ]]; then
 fi
 
 # --- apply --------------------------------------------------------------------
-# Both views are read again right before each removal: a deploy or a rollback
-# pull may have happened since the plan, or since the previous removal.
-pulled_at() {  # epoch of the last pull of image $1, read now
+# The host is read again right before each removal: a deploy or a rollback pull
+# may have happened since the plan, or since the previous removal.
+CUR_REFS="" CUR_PULLED=0
+reread_image() {  # current references and pull time of image $1, read now
   local line lasttag created
   line=$(docker image inspect --format "$IMAGE_FORMAT" "$1" 2>/dev/null) || return 1
   [[ -n $line ]] || return 1
-  IFS='|' read -r _ _ lasttag created _ <<<"$line"
-  to_epoch "$lasttag" || to_epoch "$created" || now
+  IFS='|' read -r _ CUR_REFS lasttag created _ <<<"$line"
+  CUR_PULLED=$(to_epoch "$lasttag" || to_epoch "$created" || now)
 }
 
 failed=0
 for id in "${remove_ids[@]}"; do
   snapshot_in_use
   if [[ -n ${IN_USE[$id]:-} ]]; then log "skip (now in use): ${REFS[$id]}"; continue; fi
-  if ! pulled=$(pulled_at "$id"); then log "skip (gone): ${REFS[$id]}"; continue; fi
-  if (($(now) - pulled < min_age_s)); then log "skip (now too young): ${REFS[$id]}"; continue; fi
+  if ! reread_image "$id"; then log "skip (gone): ${REFS[$id]}"; continue; fi
+  if (($(now) - CUR_PULLED < min_age_s)); then log "skip (now too young): ${REFS[$id]}"; continue; fi
   for r in ${REFS[$id]}; do
+    # A tag can be re-pushed and pulled between the plan and now, so that the
+    # reference names a different, fresh image: remove it only while it still
+    # names the image that was planned.
+    if [[ " $CUR_REFS" != *" $r "* ]]; then log "skip (moved): $r"; continue; fi
     docker image rm "$r" || { log "failed: docker image rm $r"; failed=1; }
   done
 done

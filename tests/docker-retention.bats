@@ -277,6 +277,34 @@ setup() {
   grep -qx 'image rm acme/app:v3' "$CALLS"
 }
 
+@test "a tag that moved to a new image after the plan is not removed" {
+  # Between plan and apply acme/app:v2 is re-pushed and pulled: the planned image
+  # sha256:v2 lost the tag (it is dangling now) and a new image, pulled a minute
+  # ago, carries it. Removing "acme/app:v2" would delete the fresh image.
+  cp "$FIX/images.txt" "$FIX/images.txt.later"
+  sed -i 's/^sha256:v2|acme\/app:v2 |/sha256:v2|| /' "$FIX/images.txt.later"
+  printf 'sha256:v2new|acme/app:v2 |2026-10-22 02:59:00.366906515 +0000 UTC|2026-10-22T02:00:00.803283863Z|900000000\n' >> "$FIX/images.txt.later"
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"skip (moved): acme/app:v2"* ]]
+  run ! grep -qx 'image rm acme/app:v2' "$CALLS"
+  grep -qx 'image rm acme/app:v3' "$CALLS"
+}
+
+@test "only the references that still name the planned image are removed" {
+  # v2 carries a second tag that moved away; its first tag still names the image.
+  printf 'sha256:v2|acme/app:v2 acme/app:stable |2026-09-10 00:00:00.366906515 +0000 UTC|2026-09-10T00:00:00.803283863Z|900000000\n' \
+    | cat - <(grep -v '^sha256:v2|' "$FIX/images.txt") > "$FIX/images.txt.new"
+  mv "$FIX/images.txt.new" "$FIX/images.txt"
+  cp "$FIX/images.txt" "$FIX/images.txt.later"
+  sed -i 's/^sha256:v2|acme\/app:v2 acme\/app:stable |/sha256:v2|acme\/app:v2 |/' "$FIX/images.txt.later"
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"skip (moved): acme/app:stable"* ]]
+  grep -qx 'image rm acme/app:v2' "$CALLS"
+  run ! grep -qx 'image rm acme/app:stable' "$CALLS"
+}
+
 @test "a failing image rm exits 1 and the loop carries on" {
   FAIL_ON='image rm acme/app:v2' run "$SCRIPT" --apply
   [ "$status" -eq 1 ]
