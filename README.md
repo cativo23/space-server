@@ -154,7 +154,7 @@ The [`IMPROVEMENT-PLAN.md`](IMPROVEMENT-PLAN.md) tracks every finding from a str
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — Detailed topology, request flows (HTTPS, mail, alerts), network boundaries, persistence layer, deployment flow
 - **[docs/decisions/](docs/decisions/)** — Architecture Decision Records: single source of truth, observability adoption, SMTP relay choice. Nygard format, current index in `docs/decisions/README.md`
-- **[docs/runbooks/](docs/runbooks/)** — Step-by-step operational procedures (status page setup, adding a new service)
+- **[docs/runbooks/](docs/runbooks/)** — Step-by-step operational procedures (status page setup, adding a new service, container log rotation)
 - **[docs/screenshots/](docs/screenshots/)** — Visual evidence of the stack (Grafana dashboards, Discord alerts, Traefik routing)
 - **[IMPROVEMENT-PLAN.md](IMPROVEMENT-PLAN.md)** — Active findings roadmap with status per item
 - **[CHANGELOG.md](CHANGELOG.md)** — Keep-a-Changelog format
@@ -254,6 +254,10 @@ After a `git pull`, repeat the `install` lines to update the copies. Host-only o
 
 Tests: `bats tests/docker-retention.bats` (bats-core 1.7 or newer; CI installs the pinned v1.13.0) runs the script against a stub `docker` and checks, among other things, that dry-run never issues a destructive command and that `--apply` issues only the expected ones. CI also runs shellcheck on the script and the tests, and `systemd-analyze verify` on the units.
 
+## Container log rotation
+
+Docker keeps container logs forever by default. [`docker/daemon.json`](docker/daemon.json) caps them at 10 MB x 5 files per container and enables `live-restore`. It is not applied by any deploy: it goes onto the host by hand, in a specific order, and existing containers keep their old log config until recreated. Follow [`docs/runbooks/container-log-rotation.md`](docs/runbooks/container-log-rotation.md), including its rollback, which does **not** mean deleting the file. CI validates the file with `dockerd --validate` and with `scripts/check-daemon-json.sh`, because `dockerd --validate` does not check the log option values.
+
 ## Repo structure
 
 ```
@@ -266,9 +270,10 @@ space-server/
 ├── grafana/                    # Provisioned datasource + dashboards
 ├── dozzle/                     # Live container logs UI
 ├── uptime-kuma/                # External uptime probes
-├── scripts/                    # Migration automation + docker-retention.sh
+├── docker/                     # daemon.json (log rotation, live-restore)
+├── scripts/                    # Migration automation + docker-retention.sh, check-daemon-json.sh
 ├── systemd/                    # Host timers (docker-retention)
-├── tests/                      # bats suite and docker stub for docker-retention
+├── tests/                      # bats suites (docker-retention with a docker stub, daemon-json)
 ├── IMPROVEMENT-PLAN.md         # Architecture roadmap (active)
 └── CHANGELOG.md                # Keep-a-Changelog format
 ```
