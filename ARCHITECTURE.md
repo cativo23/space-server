@@ -152,7 +152,8 @@ Prometheus  --(every 30s)-->  evaluate alert_rules.yml
        └── if firing for `for: ...`
            ├─ group_by (alertname, severity)
            ├─ group_wait 30s
-           ├─ inhibit_rules (critical suppresses warning)
+           ├─ inhibit_rules (critical disk alert suppresses the warning-level disk alerts
+           │                  on the same instance and mountpoint)
            └─ webhook → alertmanager-discord :9094
                          └─ format Discord embed
                             └─ POST → https://discord.com/api/webhooks/.../...
