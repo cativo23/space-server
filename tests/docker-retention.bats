@@ -59,12 +59,12 @@ setup() {
   # id | refs | LastTagTime | Created | size   (the separator is not whitespace on
   # purpose: an empty refs field, which dangling images have, must stay a field)
   {
-    printf 'sha256:v1|acme/app:v1 |2026-09-01 00:00:00 +0000 UTC|2026-09-01T00:00:00Z|900000000\n'
-    printf 'sha256:v2|acme/app:v2 |2026-09-10 00:00:00 +0000 UTC|2026-09-10T00:00:00Z|900000000\n'
-    printf 'sha256:v3|acme/app:v3 |2026-09-20 00:00:00 +0000 UTC|2026-09-20T00:00:00Z|900000000\n'
-    printf 'sha256:v4|acme/app:v4 |2026-10-01 00:00:00 +0000 UTC|2026-10-01T00:00:00Z|900000000\n'
-    printf 'sha256:v5|acme/app:v5 |2026-10-10 00:00:00 +0000 UTC|2026-10-10T00:00:00Z|900000000\n'
-    printf 'sha256:solo|lonely/tool:latest |2026-06-01 00:00:00 +0000 UTC|2026-06-01T00:00:00Z|500000000\n'
+    printf 'sha256:v1|acme/app:v1 |2026-09-01 00:00:00.366906515 +0000 UTC|2026-09-01T00:00:00.803283863Z|900000000\n'
+    printf 'sha256:v2|acme/app:v2 |2026-09-10 00:00:00.366906515 +0000 UTC|2026-09-10T00:00:00.803283863Z|900000000\n'
+    printf 'sha256:v3|acme/app:v3 |2026-09-20 00:00:00.366906515 +0000 UTC|2026-09-20T00:00:00.803283863Z|900000000\n'
+    printf 'sha256:v4|acme/app:v4 |2026-10-01 00:00:00.366906515 +0000 UTC|2026-10-01T00:00:00.803283863Z|900000000\n'
+    printf 'sha256:v5|acme/app:v5 |2026-10-10 00:00:00.366906515 +0000 UTC|2026-10-10T00:00:00.803283863Z|900000000\n'
+    printf 'sha256:solo|lonely/tool:latest |2026-06-01 00:00:00.366906515 +0000 UTC|2026-06-01T00:00:00.803283863Z|500000000\n'
   } > "$FIX/images.txt"
 }
 
@@ -129,9 +129,18 @@ setup() {
   has_line KEEP too-young acme/app:v2
 }
 
+@test "a tag whose LastTagTime is the zero time is aged by its RFC3339 Created date" {
+  # Layer-only pulls can leave LastTagTime unset; Created is then the only date. v2 was created yesterday.
+  sed -i -e 's/^sha256:v2|acme\/app:v2 |[^|]*|[^|]*|/sha256:v2|acme\/app:v2 |0001-01-01 00:00:00 +0000 UTC|2026-10-21T02:30:22.68464112Z|/' \
+         -e 's/^\(sha256:v5|acme\/app:v5 |\)2026-10-10 00:00:00/\12026-10-22 01:00:00/' "$FIX/images.txt"
+  KEEP_LAST=1 run "$SCRIPT"
+  has_line KEEP too-young acme/app:v2
+  has_line REMOVE superseded acme/app:v3
+}
+
 @test "a dangling image (empty refs field) is neither judged nor mistaken for a repository" {
   # What docker prints for an untagged image: refs empty, LastTagTime the zero time.
-  printf 'sha256:dang||0001-01-01 00:00:00 +0000 UTC|2026-08-01T00:00:00Z|700000000\n' >> "$FIX/images.txt"
+  printf 'sha256:dang||0001-01-01 00:00:00.366906515 +0000 UTC|2026-08-01T00:00:00.803283863Z|700000000\n' >> "$FIX/images.txt"
   run "$SCRIPT"
   [ "$status" -eq 0 ]
   [[ "$output" == *"images=6 "* ]]            # the six tagged images, not the dangling one
@@ -141,9 +150,9 @@ setup() {
 
 @test "digest-pinned images group under their repository and a pinned compose ref protects them" {
   {
-    printf 'sha256:g6|ghost@sha256:g6 |2026-10-21 03:00:00 +0000 UTC|2026-10-20T00:00:00Z|1\n'
-    printf 'sha256:g5|ghost@sha256:g5 |2026-08-01 00:00:00 +0000 UTC|2026-08-01T00:00:00Z|1\n'
-    printf 'sha256:g4|ghost@sha256:g4 |2026-07-01 00:00:00 +0000 UTC|2026-07-01T00:00:00Z|1\n'
+    printf 'sha256:g6|ghost@sha256:g6 |2026-10-21 03:00:00.366906515 +0000 UTC|2026-10-20T00:00:00.803283863Z|1\n'
+    printf 'sha256:g5|ghost@sha256:g5 |2026-08-01 00:00:00.366906515 +0000 UTC|2026-08-01T00:00:00.803283863Z|1\n'
+    printf 'sha256:g4|ghost@sha256:g4 |2026-07-01 00:00:00.366906515 +0000 UTC|2026-07-01T00:00:00.803283863Z|1\n'
   } >> "$FIX/images.txt"
   printf 'services:\n  g:\n    image: docker.io/library/ghost:5-alpine@sha256:g4 # old pin\n' > "$FIX/compose/app/compose.yml"
   run "$SCRIPT"
