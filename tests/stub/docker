@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Test double for the docker CLI. Answers from fixture files in $FIX and
+# records every invocation in $CALLS so tests can assert what was (not) run.
+#
+# A second or later call of the same kind reads "<fixture>.later" when it
+# exists, which lets a test change the host between the plan and the apply.
+# FAIL_ON makes any call whose arguments contain that text exit 1.
+printf '%s\n' "$*" >> "$CALLS"
+
+if [[ -n ${FAIL_ON:-} && "$*" == *"$FAIL_ON"* ]]; then
+  echo "stub: forced failure: docker $*" >&2
+  exit 1
+fi
+
+# fixture NAME CALL-PREFIX: path of the fixture this call should read.
+fixture() {
+  local n
+  n=$(grep -c "^$2" "$CALLS" || true)
+  if ((n >= 2)) && [[ -f $FIX/$1.later ]]; then printf '%s' "$FIX/$1.later"; else printf '%s' "$FIX/$1"; fi
+}
+
+case "$1 $2" in
+  "ps -a")            cat "$(fixture ps.tsv 'ps ')" ;;
+  "inspect --format") f=$(fixture ctr.tsv 'inspect '); shift 3; for c in "$@"; do awk -F'\t' -v c="$c" '$1==c{print $2}' "$f"; done ;;
+  "image ls")
+    if [[ "$*" == *dangling=true* ]]; then cat "$FIX/dangling.txt" 2>/dev/null || true; else cut -d'|' -f1 "$FIX/images.txt"; fi ;;
+  "image inspect")    f=$(fixture images.txt 'image inspect '); shift 4; for i in "$@"; do awk -F'|' -v i="$i" '$1==i' "$f"; done ;;
+  "image rm")         echo "Untagged: $3" ;;
+  "image prune")      echo "Total reclaimed space: 0B" ;;
+  "builder du")       printf 'Reclaimable:\t838.6MB\nTotal:\t\t838.6MB\n' ;;
+  "builder prune")    echo "Total:	0B" ;;
+  *) echo "stub: unexpected docker $*" >&2; exit 99 ;;
+esac

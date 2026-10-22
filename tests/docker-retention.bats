@@ -1,0 +1,287 @@
+#!/usr/bin/env bats
+# Runs scripts/docker-retention.sh against a stub docker CLI (tests/stub/docker).
+# NOW is pinned so ages are deterministic: 2026-10-22T03:00:00Z.
+#
+# shellcheck disable=SC2016  # the ${VAR} strings written to compose fixtures are literal on purpose
+#
+# bats runs each test under `set -e`, but a negated command (`! grep ...`) that
+# is not the last line of a test never fails it. Negative checks therefore use
+# `run !`, or the lacks_* helpers that return 1 explicitly.
+bats_require_minimum_version 1.5.0
+
+SCRIPT="$BATS_TEST_DIRNAME/../scripts/docker-retention.sh"
+
+# has_line DECISION REASON REF: one output line carries all three.
+has_line() {
+  grep -qP "^$1\t$2\t.*(^|\t| )\Q$3\E( |$)" <<<"$output" || { echo "missing line: $*"; return 1; }
+}
+lacks_line() {
+  if grep -qP "^$1\t$2\t.*(^|\t| )\Q$3\E( |$)" <<<"$output"; then echo "unexpected line: $*"; return 1; fi
+}
+
+# The commands that change anything on the host, in the order they were issued.
+destructive_calls() { grep -E '^(image rm|image prune|builder prune|rmi|system|volume|network|container|rm|stop|kill) ' "$CALLS" || true; }
+
+setup() {
+  export FIX="$BATS_TEST_TMPDIR/fix" CALLS="$BATS_TEST_TMPDIR/calls"
+  mkdir -p "$FIX/compose/app"; : > "$CALLS"
+  export PATH="$BATS_TEST_DIRNAME/stub:$PATH"
+  export DOCKER_RETENTION_NOW=1792638000 KEEP_LAST=2 MIN_AGE_HOURS=72
+  export COMPOSE_ROOTS="$FIX/compose" DOCKER_RETENTION_LOCK="$BATS_TEST_TMPDIR/lock"
+  unset FAIL_ON PROTECT_REGEX RUNTIME_DIRECTORY XDG_RUNTIME_DIR
+  # containers: one running app on v5, one STOPPED container on old v1
+  printf 'c1\trunning\nc2\texited\n' > "$FIX/ps.tsv"
+  printf 'c1\tsha256:v5\nc2\tsha256:v1\n' > "$FIX/ctr.tsv"
+  # id | refs | LastTagTime | Created | size   (the separator is not whitespace on
+  # purpose: an empty refs field, which dangling images have, must stay a field)
+  {
+    printf 'sha256:v1|acme/app:v1 |2026-09-01 00:00:00 +0000 UTC|2026-09-01T00:00:00Z|900000000\n'
+    printf 'sha256:v2|acme/app:v2 |2026-09-10 00:00:00 +0000 UTC|2026-09-10T00:00:00Z|900000000\n'
+    printf 'sha256:v3|acme/app:v3 |2026-09-20 00:00:00 +0000 UTC|2026-09-20T00:00:00Z|900000000\n'
+    printf 'sha256:v4|acme/app:v4 |2026-10-01 00:00:00 +0000 UTC|2026-10-01T00:00:00Z|900000000\n'
+    printf 'sha256:v5|acme/app:v5 |2026-10-10 00:00:00 +0000 UTC|2026-10-10T00:00:00Z|900000000\n'
+    printf 'sha256:solo|lonely/tool:latest |2026-06-01 00:00:00 +0000 UTC|2026-06-01T00:00:00Z|500000000\n'
+  } > "$FIX/images.txt"
+}
+
+# --- dry-run ------------------------------------------------------------------
+
+@test "dry-run is the default and never calls a destructive subcommand" {
+  run "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DRY-RUN"* ]]
+  grep -q '^ps -a' "$CALLS"                    # the stub was really exercised
+  run ! grep -Eq '^(image rm|image prune|builder prune|rmi|system|volume|network|container|rm|stop|kill) ' "$CALLS"
+}
+
+@test "an explicit --dry-run never calls a destructive subcommand either" {
+  run "$SCRIPT" --dry-run
+  [ "$status" -eq 0 ]
+  grep -q '^ps -a' "$CALLS"
+  [ -z "$(destructive_calls)" ]
+}
+
+@test "keeps the newest N per repository and the image a running container uses" {
+  run "$SCRIPT"
+  has_line KEEP newest-2 acme/app:v4
+  has_line KEEP in-use acme/app:v5
+}
+
+@test "an image used only by a STOPPED container is kept" {
+  run "$SCRIPT"
+  has_line KEEP in-use acme/app:v1
+  lacks_line REMOVE superseded acme/app:v1
+}
+
+@test "superseded, unused, old tags are listed for removal" {
+  run "$SCRIPT"
+  has_line REMOVE superseded acme/app:v2
+  has_line REMOVE superseded acme/app:v3
+}
+
+@test "the only tag of a repository is never removed, only reported" {
+  run "$SCRIPT"
+  has_line KEEP newest-2 lonely/tool:latest
+  grep -qP "^NO-CONTAINER\tlonely/tool\t" <<<"$output"
+}
+
+@test "a tag named by a compose file (default of \${VAR:-x}) is kept" {
+  printf 'services:\n  a:\n    image: "${REG:-acme}/app:${TAG:-v2}"\n' > "$FIX/compose/app/compose.prod.yml"
+  run "$SCRIPT"
+  has_line KEEP compose-ref acme/app:v2
+}
+
+@test "PROTECT_REGEX holds a tag back" {
+  PROTECT_REGEX='^acme/app:v3$' run "$SCRIPT"
+  has_line KEEP protected acme/app:v3
+  has_line REMOVE superseded acme/app:v2
+}
+
+@test "a tag pulled less than MIN_AGE_HOURS ago is kept even if built long ago" {
+  # v2 (built in September) was re-pulled yesterday, e.g. for a rollback; v5 is still newer.
+  sed -i -e 's/^\(sha256:v2|acme\/app:v2 |\)2026-09-10 00:00:00/\12026-10-21 00:00:00/' \
+         -e 's/^\(sha256:v5|acme\/app:v5 |\)2026-10-10 00:00:00/\12026-10-21 12:00:00/' "$FIX/images.txt"
+  KEEP_LAST=1 run "$SCRIPT"
+  has_line KEEP too-young acme/app:v2
+}
+
+@test "a dangling image (empty refs field) is neither judged nor mistaken for a repository" {
+  # What docker prints for an untagged image: refs empty, LastTagTime the zero time.
+  printf 'sha256:dang||0001-01-01 00:00:00 +0000 UTC|2026-08-01T00:00:00Z|700000000\n' >> "$FIX/images.txt"
+  run "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"images=6 "* ]]            # the six tagged images, not the dangling one
+  run ! grep -qE '^(KEEP|REMOVE|NO-CONTAINER)'$'\t.*UTC' <<<"$output"
+  run ! grep -q 'sha256:dang' <<<"$output"
+}
+
+@test "digest-pinned images group under their repository and a pinned compose ref protects them" {
+  {
+    printf 'sha256:g6|ghost@sha256:g6 |2026-10-21 03:00:00 +0000 UTC|2026-10-20T00:00:00Z|1\n'
+    printf 'sha256:g5|ghost@sha256:g5 |2026-08-01 00:00:00 +0000 UTC|2026-08-01T00:00:00Z|1\n'
+    printf 'sha256:g4|ghost@sha256:g4 |2026-07-01 00:00:00 +0000 UTC|2026-07-01T00:00:00Z|1\n'
+  } >> "$FIX/images.txt"
+  printf 'services:\n  g:\n    image: docker.io/library/ghost:5-alpine@sha256:g4 # old pin\n' > "$FIX/compose/app/compose.yml"
+  run "$SCRIPT"
+  has_line KEEP newest-2 ghost@sha256:g6
+  has_line KEEP newest-2 ghost@sha256:g5
+  has_line KEEP compose-ref ghost@sha256:g4
+}
+
+@test "an unresolvable \${VAR} or \${VAR:?} ref protects nothing extra and does not break the run" {
+  printf 'services:\n  a:\n    image: acme/app:${TAG:?must be set}\n' > "$FIX/compose/app/compose.yml"
+  run "$SCRIPT"
+  [ "$status" -eq 0 ]
+  has_line REMOVE superseded acme/app:v2
+}
+
+# --- startup validation -------------------------------------------------------
+
+@test "KEEP_LAST below 1 is rejected" {
+  KEEP_LAST=0 run "$SCRIPT"
+  [ "$status" -eq 64 ]
+}
+
+@test "a non-numeric MIN_AGE_HOURS and an unknown flag are rejected" {
+  MIN_AGE_HOURS=soon run "$SCRIPT"
+  [ "$status" -eq 64 ]
+  run "$SCRIPT" --nuke
+  [ "$status" -eq 64 ]
+}
+
+@test "an invalid PROTECT_REGEX exits 64 at startup instead of protecting nothing" {
+  PROTECT_REGEX='^(acme' run "$SCRIPT" --apply
+  [ "$status" -eq 64 ]
+  [[ "$output" == *PROTECT_REGEX* ]]
+  [ ! -s "$CALLS" ]                             # nothing was asked of docker
+}
+
+# --- host state that blocks a judgement ---------------------------------------
+
+@test "a container mid-transition stops --apply with 75 (deploy in flight)" {
+  printf 'c3\trestarting\n' >> "$FIX/ps.tsv"; printf 'c3\tsha256:v5\n' >> "$FIX/ctr.tsv"
+  run "$SCRIPT" --apply
+  [ "$status" -eq 75 ]
+  [ -z "$(destructive_calls)" ]
+}
+
+@test "docker listing no containers at all stops --apply with 70" {
+  : > "$FIX/ps.tsv"
+  run "$SCRIPT" --apply
+  [ "$status" -eq 70 ]
+  [ -z "$(destructive_calls)" ]
+}
+
+@test "containers that exist but resolve to no image exit 70, even in dry-run" {
+  : > "$FIX/ctr.tsv"                            # docker inspect answers with nothing
+  run "$SCRIPT"
+  [ "$status" -eq 70 ]
+  [ -z "$(destructive_calls)" ]
+}
+
+@test "a failing docker inspect exits 70 instead of judging every image unused" {
+  FAIL_ON='inspect --format {{.Image}}' run "$SCRIPT" --apply
+  [ "$status" -eq 70 ]
+  [ -z "$(destructive_calls)" ]
+}
+
+# --- --apply ------------------------------------------------------------------
+
+@test "--apply removes superseded tags by reference and nothing else" {
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  grep -qx 'image rm acme/app:v2' "$CALLS"
+  grep -qx 'image rm acme/app:v3' "$CALLS"
+  run ! grep -E 'image rm .*(v1|v4|v5|lonely)' "$CALLS"
+}
+
+@test "--apply never forces an image removal" {
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  grep -q '^image rm ' "$CALLS"
+  run ! grep -Eq '^image rm .*(-f|--force)' "$CALLS"
+  run ! grep -Eq '^(rmi|rm) ' "$CALLS"
+}
+
+@test "--apply issues exactly these destructive commands" {
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  expected=$'image rm acme/app:v2\nimage rm acme/app:v3\nimage prune -f --filter until=72h\nbuilder prune -f --filter until=168h\nbuilder prune -f --max-used-space 2gb'
+  [ "$(destructive_calls)" = "$expected" ]
+}
+
+@test "--apply never prunes all images or the whole system, and leaves volumes, networks and containers alone" {
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  run ! grep -Eq '^system ' "$CALLS"
+  run ! grep -Eq '^(image|builder) prune .*(-a|--all)( |$)' "$CALLS"
+  run ! grep -Eq '^(volume|network|container|stop|kill) ' "$CALLS"
+}
+
+@test "--apply re-checks usage before every removal" {
+  run "$SCRIPT" --apply
+  # one view for the plan plus one per removal, so a deploy that starts mid-run is seen
+  [ "$(grep -c '^ps -a' "$CALLS")" -ge 3 ]
+}
+
+@test "an image that a container started using after the plan is skipped" {
+  cp "$FIX/ps.tsv" "$FIX/ps.tsv.later";   printf 'c3\trunning\n' >> "$FIX/ps.tsv.later"
+  cp "$FIX/ctr.tsv" "$FIX/ctr.tsv.later"; printf 'c3\tsha256:v2\n' >> "$FIX/ctr.tsv.later"
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"skip (now in use): acme/app:v2"* ]]
+  run ! grep -qx 'image rm acme/app:v2' "$CALLS"
+  grep -qx 'image rm acme/app:v3' "$CALLS"
+}
+
+@test "an image pulled again after the plan (a rollback pull) is skipped as too young" {
+  cp "$FIX/images.txt" "$FIX/images.txt.later"
+  sed -i 's/^\(sha256:v2|acme\/app:v2 |\)2026-09-10 00:00:00/\12026-10-22 02:00:00/' "$FIX/images.txt.later"
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"skip (now too young): acme/app:v2"* ]]
+  run ! grep -qx 'image rm acme/app:v2' "$CALLS"
+  grep -qx 'image rm acme/app:v3' "$CALLS"
+}
+
+@test "a failing image rm exits 1 and the loop carries on" {
+  FAIL_ON='image rm acme/app:v2' run "$SCRIPT" --apply
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"failed: docker image rm acme/app:v2"* ]]
+  grep -qx 'image rm acme/app:v3' "$CALLS"
+  grep -q '^image prune' "$CALLS"
+  grep -q '^builder prune' "$CALLS"
+}
+
+# --- lock ---------------------------------------------------------------------
+
+@test "--apply exits 75 while another run holds the lock" {
+  exec 8>"$DOCKER_RETENTION_LOCK"
+  flock -n 8
+  run "$SCRIPT" --apply
+  exec 8>&-
+  [ "$status" -eq 75 ]
+  [ ! -s "$CALLS" ]
+}
+
+@test "the lock lives in the unit's RuntimeDirectory when no path is given" {
+  unset DOCKER_RETENTION_LOCK
+  mkdir "$BATS_TEST_TMPDIR/rt"
+  RUNTIME_DIRECTORY="$BATS_TEST_TMPDIR/rt" run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  [ -e "$BATS_TEST_TMPDIR/rt/lock" ]
+}
+
+@test "--apply refuses to guess a lock path in a shared directory" {
+  unset DOCKER_RETENTION_LOCK
+  run "$SCRIPT" --apply
+  [ "$status" -eq 64 ]
+  [[ "$output" == *DOCKER_RETENTION_LOCK* ]]
+  [ ! -s "$CALLS" ]
+}
+
+@test "the header documents every exit code" {
+  for code in 0 1 64 70 75; do
+    sed -n '1,/^set -/p' "$SCRIPT" | grep -qE "(^|[ ,])$code " || { echo "exit $code undocumented"; return 1; }
+  done
+}
