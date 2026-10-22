@@ -10,6 +10,9 @@ on:
       - "traefik/**"
       - "grafana/**"
       - ".github/workflows/validate.yml"
+      - "scripts/docker-retention.sh"
+      - "tests/**"
+      - "systemd/**"
   pull_request:
     paths:
       - "**/docker-compose.yml"
@@ -17,6 +20,9 @@ on:
       - "alertmanager/**"
       - "traefik/**"
       - "grafana/**"
+      - "scripts/docker-retention.sh"
+      - "tests/**"
+      - "systemd/**"
 
 jobs:
   compose:
@@ -70,3 +76,27 @@ jobs:
           docker run --rm -v "$PWD/alertmanager":/etc/alertmanager \
             --entrypoint amtool prom/alertmanager:latest \
             check-config /etc/alertmanager/alertmanager.yml
+
+  retention:
+    name: docker-retention script + units
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        # The .bats files are included: a `! grep` that can never fail is
+        # exactly the kind of thing it flags.
+        run: shellcheck -x scripts/docker-retention.sh tests/stub/docker tests/docker-retention.bats
+
+      - name: bats
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq bats
+          bats tests/docker-retention.bats
+
+      - name: systemd units
+        # ExecStart points at the install location, which does not exist on the
+        # runner: that one warning is expected, anything else fails the job.
+        run: |
+          out=$(systemd-analyze verify systemd/docker-retention.timer systemd/docker-retention.service 2>&1 || true)
+          unexpected=$(grep -v 'docker-retention.service: Command /usr/local/sbin/docker-retention is not executable' <<<"$out" || true)
+          [ -z "$unexpected" ] || { echo "$unexpected"; exit 1; }
