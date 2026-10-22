@@ -140,12 +140,14 @@ setup() {
 
 @test "a dangling image (empty refs field) is neither judged nor mistaken for a repository" {
   # What docker prints for an untagged image: refs empty, LastTagTime the zero time.
-  printf 'sha256:dang||0001-01-01 00:00:00.366906515 +0000 UTC|2026-08-01T00:00:00.803283863Z|700000000\n' >> "$FIX/images.txt"
+  printf 'sha256:dang||0001-01-01 00:00:00 +0000 UTC|2026-08-01T00:00:00.803283863Z|700000000\n' >> "$FIX/images.txt"
   run "$SCRIPT"
   [ "$status" -eq 0 ]
+  # `run` replaces $output, so judge the script's output, not that of a later command.
   [[ "$output" == *"images=6 "* ]]            # the six tagged images, not the dangling one
-  run ! grep -qE '^(KEEP|REMOVE|NO-CONTAINER)'$'\t.*UTC' <<<"$output"
-  run ! grep -q 'sha256:dang' <<<"$output"
+  [[ "$output" != *UTC* ]]                     # a shifted column would surface a timestamp word as a repository
+  [[ "$output" != *sha256:dang* ]]
+  [[ "$output" != *0001-01-01* ]]
 }
 
 @test "digest-pinned images group under their repository and a pinned compose ref protects them" {
@@ -311,8 +313,8 @@ setup() {
   [ ! -s "$CALLS" ]
 }
 
-@test "the header documents every exit code" {
-  for code in 0 1 64 70 75; do
-    sed -n '1,/^set -/p' "$SCRIPT" | grep -qE "(^|[ ,])$code " || { echo "exit $code undocumented"; return 1; }
-  done
+@test "the header documents exactly the exit codes the script uses" {
+  codes=$(sed -n '/^# Exit codes:/,/^set -/p' "$SCRIPT" | sed 's/^# *//' | tr '\n' ' ' \
+          | grep -oE '(codes:|,) [0-9]+ ' | grep -oE '[0-9]+' | tr '\n' ' ')
+  [ "$codes" = "0 1 64 70 75 " ]
 }
