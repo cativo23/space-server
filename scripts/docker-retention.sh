@@ -36,10 +36,10 @@
 # --apply takes a lock, by default $RUNTIME_DIRECTORY/lock (systemd
 # RuntimeDirectory=); outside a unit set DOCKER_RETENTION_LOCK to a private path.
 #
-# Exit codes: 0 ok, 1 some removals failed, 64 bad usage or configuration,
-# 70 host state unreadable (docker ps/inspect failed, or containers exist but
-# none resolved to an image), 75 host busy (another run, or a container
-# mid-transition): retry later.
+# Exit codes: 0 ok, 1 a removal or a prune failed, 64 bad usage or configuration,
+# 70 host state unreadable (docker ps, inspect or image ls failed, or containers
+# exist but none resolved to an image), 75 host busy (another run, or a
+# container mid-transition): retry later.
 set -Eeuo pipefail
 
 MODE=dry-run
