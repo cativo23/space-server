@@ -32,6 +32,18 @@ mutate() {
   [ "$status" -eq 0 ]
 }
 
+@test "should_say_jq_is_missing_instead_of_calling_the_file_invalid" {
+  # A PATH that has bash and nothing else: the script must notice there is no
+  # jq. The host this runs on in practice has none, and "not valid JSON" sends
+  # the reader after the file instead of the missing tool.
+  mkdir "$BATS_TEST_TMPDIR/nojq"
+  ln -s "$(command -v bash)" "$BATS_TEST_TMPDIR/nojq/bash"
+  run env PATH="$BATS_TEST_TMPDIR/nojq" "$SCRIPT" "$REAL"
+  [ "$status" -eq 70 ]
+  [[ $output == *"jq is required"* ]]
+  [[ $output != *"not valid JSON"* ]]
+}
+
 @test "should_reject_a_file_that_is_not_json" {
   printf '{"live-restore": true,\n' > "$CONF"
   run "$SCRIPT" "$CONF"

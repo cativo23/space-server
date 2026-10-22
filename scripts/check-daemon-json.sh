@@ -17,12 +17,15 @@
 # Every problem is printed, not just the first.
 #
 # Usage: check-daemon-json.sh FILE
-# Exit codes: 0 ok, 1 the file is invalid, 64 usage or unreadable file.
+# Exit codes: 0 ok, 1 the file is invalid, 64 usage or unreadable file, 70 jq
+# is not installed (the production host has none: run this from a machine that
+# does, or install jq there).
 set -euo pipefail
 
 [[ $# -eq 1 ]] || { echo "usage: ${0##*/} FILE" >&2; exit 64; }
 FILE=$1
 [[ -r $FILE && -f $FILE ]] || { echo "${0##*/}: cannot read $FILE" >&2; exit 64; }
+command -v jq >/dev/null || { echo "${0##*/}: jq is required but is not installed" >&2; exit 70; }
 
 problems=0
 fail() { echo "$FILE: $*"; problems=$((problems + 1)); }
