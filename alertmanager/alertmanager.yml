@@ -15,13 +15,14 @@ receivers:
         send_resolved: true
 
 inhibit_rules:
-  # If a host disk goes critical, suppress the warning-level disk alert for the
-  # same mountpoint. The two alerts have different alertnames, so alertname
-  # cannot be in `equal`; the names are matched explicitly instead (matching on
-  # severity alone would also inhibit unrelated alerts that lack a mountpoint
-  # label, since a label missing on both sides counts as equal).
+  # If a host disk goes critical, suppress the warning-level disk alerts (low
+  # space and filling fast) for the same instance and mountpoint. The alerts
+  # have different alertnames, so alertname cannot be in `equal`; the names are
+  # matched explicitly instead (matching on severity alone would also inhibit
+  # unrelated alerts that lack a mountpoint label, since a label missing on
+  # both sides counts as equal).
   - source_matchers:
       - alertname = HostDiskSpaceCritical
     target_matchers:
-      - alertname = HostDiskSpaceLow
+      - alertname =~ "HostDiskSpaceLow|HostDiskFillingFast"
     equal: ['instance', 'mountpoint']

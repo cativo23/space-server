@@ -140,3 +140,19 @@ settle_inhibition() {
   poll inhibited_by ContainerRestartLoop cadvisor:8080
   [ "$output" = "[]" ]
 }
+
+@test "should_inhibit_the_slope_alert_when_the_critical_one_fires_for_the_same_mountpoint" {
+  # HostDiskFillingFast is a warning too; a full disk must not page twice.
+  settle_inhibition
+  fire HostDiskFillingFast warning node:9100 /
+  WANT_INHIBITED=1 poll inhibited_by HostDiskFillingFast node:9100 /
+  [ "$output" != "[]" ]
+  [ "$output" != "absent" ]
+}
+
+@test "should_not_inhibit_the_slope_alert_for_a_different_mountpoint" {
+  settle_inhibition
+  fire HostDiskFillingFast warning node:9100 /data
+  poll inhibited_by HostDiskFillingFast node:9100 /data
+  [ "$output" = "[]" ]
+}
