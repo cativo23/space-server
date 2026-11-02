@@ -22,10 +22,9 @@ Environment=BUILD_CACHE_UNTIL=168h
 Environment=BUILD_CACHE_MAX=2gb
 # Host-only overrides (PROTECT_REGEX during a rollback window, etc.).
 EnvironmentFile=-/etc/default/docker-retention
-# Dry-run until a week of plans has been read. The unit is a copy in
-# /etc/systemd/system, so changing this word to --apply takes effect only after
-# reinstalling the file and `systemctl daemon-reload`.
-ExecStart=/usr/local/sbin/docker-retention --dry-run
+# The unit is a copy in /etc/systemd/system, so a change to this line takes
+# effect only after reinstalling the file and `systemctl daemon-reload`.
+ExecStart=/usr/local/sbin/docker-retention --apply
 # The work happens in dockerd, not in this process, so CPU and I/O priority
 # settings here would change nothing. What follows only denies things a docker
 # CLI client never needs; UMask keeps the lock file private.
