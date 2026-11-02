@@ -80,3 +80,110 @@ tests:
       - eval_time: 8h
         alertname: HostDiskFillingFast
         exp_alerts: []
+
+  # docker-retention writes its last success time and last exit code (node-exporter
+  # textfile collector). One skipped day (exit 75) is not a failure and a success
+  # 49h ago is still inside the 50h window...
+  - interval: 1m
+    input_series:
+      - series: 'docker_retention_last_success_timestamp_seconds{instance="node"}'
+        values: '1000x3200'
+      - series: 'docker_retention_last_exit_code{instance="node"}'
+        values: '75x3200'
+    alert_rule_test:
+      - eval_time: 49h
+        alertname: DockerRetentionStale
+        exp_alerts: []
+      - eval_time: 49h
+        alertname: DockerRetentionFailed
+        exp_alerts: []
+
+  # ...and one older than 50h is stale.
+  - interval: 1m
+    input_series:
+      - series: 'docker_retention_last_success_timestamp_seconds{instance="node"}'
+        values: '1000x3200'
+    alert_rule_test:
+      - eval_time: 51h
+        alertname: DockerRetentionStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: node
+            exp_annotations:
+              summary: "docker-retention has not succeeded in over 50 hours"
+              description: "The last successful image retention run on node was more than 50 hours ago. Check `journalctl -u docker-retention` and `systemctl status docker-retention.timer` on the host."
+
+  # A failed run (exit 1 a removal failed, 70 host state unreadable) alerts at once.
+  - interval: 1m
+    input_series:
+      - series: 'docker_retention_last_exit_code{instance="node"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: DockerRetentionFailed
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: node
+            exp_annotations:
+              summary: "docker-retention failed (exit code 1)"
+              description: "The last image retention run on node exited 1 (1 a removal failed, 64 bad configuration, 70 host state unreadable). Check `journalctl -u docker-retention`."
+
+  - interval: 1m
+    input_series:
+      - series: 'docker_retention_last_exit_code{instance="node"}'
+        values: '70x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: DockerRetentionFailed
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: node
+            exp_annotations:
+              summary: "docker-retention failed (exit code 70)"
+              description: "The last image retention run on node exited 70 (1 a removal failed, 64 bad configuration, 70 host state unreadable). Check `journalctl -u docker-retention`."
+
+  # No metric at all while node-exporter is up means the job never reported
+  # (or the textfile directory is not read); while node-exporter is down
+  # PrometheusTargetDown speaks and this stays quiet.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="node",instance="node-exporter:9100"}'
+        values: '1x200'
+    alert_rule_test:
+      - eval_time: 3h
+        alertname: DockerRetentionNeverReported
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "docker-retention has never reported"
+              description: "node-exporter is up but exposes no docker_retention metrics. The timer may not have run since the metric was introduced, or the textfile directory is not being read."
+
+  - interval: 1m
+    input_series:
+      - series: 'up{job="node",instance="node-exporter:9100"}'
+        values: '0x200'
+    alert_rule_test:
+      - eval_time: 3h
+        alertname: DockerRetentionNeverReported
+        exp_alerts: []
+
+  # A file the textfile collector cannot read or parse (permissions, format)
+  # is its own alert, so it is not mistaken for a stalled job.
+  - interval: 1m
+    input_series:
+      - series: 'node_textfile_scrape_error{instance="node"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NodeTextfileScrapeError
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: node
+            exp_annotations:
+              summary: "node-exporter cannot read a textfile metrics file"
+              description: "node_textfile_scrape_error is 1 on node: a .prom file in the textfile directory is unreadable or malformed."

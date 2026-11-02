@@ -148,6 +148,9 @@ services:
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      # docker-retention leaves its metrics here (StateDirectory= in its unit),
+      # read through the root mount below, so no extra bind mount is needed.
+      - '--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector'
     volumes:
       - /:/host:ro,rslave
     networks:

@@ -81,6 +81,52 @@ while (($#)); do
   shift
 done
 
+# Metrics for node-exporter's textfile collector. Under --apply, when systemd
+# supplies STATE_DIRECTORY (StateDirectory= in the unit), every run that gets
+# past the arguments leaves its end time and exit code, and a run that exits 0
+# also its success time; a failed run carries the previous success time over.
+# Exit 75 (host busy) is a skipped run: the exit code says so, and the alert
+# rules treat it differently from a failure. A write that fails is reported on
+# stderr and never changes the exit code. The file is replaced by rename, with
+# a temp name the collector does not read, and made world-readable because the
+# unit's UMask is 0077 and node-exporter runs as another user.
+METRICS_ARMED=0
+# shellcheck disable=SC2329  # called from the EXIT trap
+write_metrics() {
+  local rc=$1 dir=${STATE_DIRECTORY%%:*} file tmp success=""
+  file=$dir/docker_retention.prom
+  if [[ -r $file ]]; then
+    success=$(awk '$1 == "docker_retention_last_success_timestamp_seconds" && $2 ~ /^[0-9]+$/ { print $2 }' "$file")
+  fi
+  if ((rc == 0)); then success=$(now); fi
+  tmp=$(mktemp "$file.XXXXXX") || return 1
+  {
+    printf '# HELP docker_retention_last_run_timestamp_seconds When the last docker-retention run ended.\n'
+    printf '# TYPE docker_retention_last_run_timestamp_seconds gauge\n'
+    printf 'docker_retention_last_run_timestamp_seconds %s\n' "$(now)"
+    printf '# HELP docker_retention_last_exit_code Exit code of the last run (0 ok, 1 failed removal, 64 bad configuration, 70 host state unreadable, 75 host busy).\n'
+    printf '# TYPE docker_retention_last_exit_code gauge\n'
+    printf 'docker_retention_last_exit_code %s\n' "$rc"
+    if [[ -n $success ]]; then
+      printf '# HELP docker_retention_last_success_timestamp_seconds When a docker-retention run last exited 0.\n'
+      printf '# TYPE docker_retention_last_success_timestamp_seconds gauge\n'
+      printf 'docker_retention_last_success_timestamp_seconds %s\n' "$success"
+    fi
+  } > "$tmp" || { rm -f "$tmp"; return 1; }
+  if ! chmod 0644 "$tmp" || ! mv -f "$tmp" "$file"; then rm -f "$tmp"; return 1; fi
+}
+# shellcheck disable=SC2329  # runs as the EXIT trap
+on_exit() {
+  local rc=$?
+  trap - EXIT
+  if ((METRICS_ARMED)) && [[ -n ${STATE_DIRECTORY:-} ]]; then
+    write_metrics "$rc" 2>/dev/null || echo "docker-retention: could not write metrics to $STATE_DIRECTORY" >&2
+  fi
+  exit "$rc"
+}
+trap on_exit EXIT
+if [[ $MODE == apply ]]; then METRICS_ARMED=1; fi
+
 if ! [[ "$KEEP_LAST" =~ ^[0-9]+$ ]] || ((KEEP_LAST < 1)); then echo "KEEP_LAST must be an integer >= 1" >&2; exit 64; fi
 [[ "$MIN_AGE_HOURS" =~ ^[0-9]+$ ]] || { echo "MIN_AGE_HOURS must be an integer" >&2; exit 64; }
 
