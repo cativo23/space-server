@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Image retention now deletes** (`--apply` in `systemd/docker-retention.service`). Twelve daily dry-runs listed only superseded versioned tags and none failed. Reinstall the unit on the host and run `systemctl daemon-reload` for it to take effect.
+
 ### Added — disk hygiene: image retention, log caps, fill-rate alert (2026-10-22)
 
 - **Image retention** (PR #32): `scripts/docker-retention.sh` with `systemd/docker-retention.{service,timer}` removes superseded image tags, keeping the last 3 per repository and never an image a container uses. The timer runs in dry-run mode; `--apply` is a later, separate change. The old tags piled up because deploys only ran `docker image prune -f`.

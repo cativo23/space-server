@@ -215,7 +215,7 @@ Tracked in [`IMPROVEMENT-PLAN.md`](IMPROVEMENT-PLAN.md). Currently open:
 
 polaris2 is shared by every project's deploy, and each release pulls a new image tag that nothing used to delete. One host-level job owns the cleanup for all stacks, including ones added later; no deploy workflow has to remember it.
 
-**`scripts/docker-retention.sh`** runs daily at 04:30 UTC from `systemd/docker-retention.{service,timer}`. It is dry-run by default and deletes only with `--apply`. It keeps an image when:
+**`scripts/docker-retention.sh`** runs daily at 04:30 UTC from `systemd/docker-retention.{service,timer}`. The script is dry-run by default and deletes only with `--apply`, which the unit passes. It keeps an image when:
 
 | Kept because | Rule |
 |---|---|
@@ -248,7 +248,7 @@ journalctl -u docker-retention -n 80
 
 After a `git pull`, repeat the `install` lines to update the copies. Host-only overrides go in `/etc/default/docker-retention` (see `systemd/docker-retention.default.example`).
 
-**Going from dry-run to apply.** The unit ships with `--dry-run`. After a week of plans in the journal look right (every run exit 0, every `REMOVE` a superseded versioned tag), change that word to `--apply` in a PR, then on the host reinstall the unit, `sudo systemctl daemon-reload`, and run the first apply with `sudo systemctl start docker-retention.service`, never by calling the script with `sudo`: the unit supplies the deploy user and the private lock directory, which a hand-run `--apply` does not have (it refuses to guess a lock path). If you must run `--apply` by hand, give it its own `DOCKER_RETENTION_LOCK`; that lock does not exclude the timer, because the unit's lock directory exists only while the unit runs. systemd itself never runs the oneshot unit twice at once, so the rule stays: go through `systemctl start`.
+**Dry-run and apply.** The unit runs `--apply`. To go back to reading plans only, change that word to `--dry-run` in a PR. Either way, on the host reinstall the unit, `sudo systemctl daemon-reload`, and run the first apply with `sudo systemctl start docker-retention.service`, never by calling the script with `sudo`: the unit supplies the deploy user and the private lock directory, which a hand-run `--apply` does not have (it refuses to guess a lock path). If you must run `--apply` by hand, give it its own `DOCKER_RETENTION_LOCK`; that lock does not exclude the timer, because the unit's lock directory exists only while the unit runs. systemd itself never runs the oneshot unit twice at once, so the rule stays: go through `systemctl start`.
 
 **Rollback.** `sudo systemctl disable --now docker-retention.timer` stops it. An image removed by mistake comes back with `docker pull <reference>` only if it came from a registry. An image built on the host cannot be pulled back; the job never removes one that is the only tag of its repository (`newest-N` keeps it), which is the case for locally built `:latest` images, but a rebuild is the only way back if one is removed anyway.
 
