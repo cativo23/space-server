@@ -91,7 +91,7 @@ done
 # a temp name the collector does not read, and made world-readable because the
 # unit's UMask is 0077 and node-exporter runs as another user.
 METRICS_ARMED=0
-# shellcheck disable=SC2329  # called from the EXIT trap
+# shellcheck disable=SC2317,SC2329  # called from the EXIT trap
 write_metrics() {
   local rc=$1 dir=${STATE_DIRECTORY%%:*} file tmp success=""
   file=$dir/docker_retention.prom
@@ -115,7 +115,7 @@ write_metrics() {
   } > "$tmp" || { rm -f "$tmp"; return 1; }
   if ! chmod 0644 "$tmp" || ! mv -f "$tmp" "$file"; then rm -f "$tmp"; return 1; fi
 }
-# shellcheck disable=SC2329  # runs as the EXIT trap
+# shellcheck disable=SC2317,SC2329  # runs as the EXIT trap
 on_exit() {
   local rc=$?
   trap - EXIT
