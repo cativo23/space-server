@@ -104,3 +104,46 @@ groups:
         annotations:
           summary: "Prometheus target {{ $labels.job }} ({{ $labels.instance }}) down"
           description: "Scrape target has been down for >10 minutes."
+
+  - name: docker-retention
+    interval: 60s
+    rules:
+      # `systemd/docker-retention.service` leaves its last success time and last
+      # exit code in node-exporter's textfile directory (scripts/docker-retention.sh).
+      # 50h tolerates one skipped day (exit 75, host busy at 04:30).
+      - alert: DockerRetentionStale
+        expr: time() - docker_retention_last_success_timestamp_seconds > 50 * 3600
+        labels:
+          severity: warning
+        annotations:
+          summary: "docker-retention has not succeeded in over 50 hours"
+          description: "The last successful image retention run on {{ $labels.instance }} was more than 50 hours ago. Check `journalctl -u docker-retention` and `systemctl status docker-retention.timer` on the host."
+
+      # 75 is a skipped run, not a failure.
+      - alert: DockerRetentionFailed
+        expr: docker_retention_last_exit_code != 0 and docker_retention_last_exit_code != 75
+        labels:
+          severity: warning
+        annotations:
+          summary: "docker-retention failed (exit code {{ $value }})"
+          description: "The last image retention run on {{ $labels.instance }} exited {{ $value }} (1 a removal failed, 64 bad configuration, 70 host state unreadable). Check `journalctl -u docker-retention`."
+
+      # Gated on node-exporter being up so a down exporter alerts once, as
+      # PrometheusTargetDown, not twice.
+      - alert: DockerRetentionNeverReported
+        expr: absent(docker_retention_last_success_timestamp_seconds) and on() up{job="node"} == 1
+        for: 2h
+        labels:
+          severity: warning
+        annotations:
+          summary: "docker-retention has never reported"
+          description: "node-exporter is up but exposes no docker_retention metrics. The timer may not have run since the metric was introduced, or the textfile directory is not being read."
+
+      - alert: NodeTextfileScrapeError
+        expr: node_textfile_scrape_error > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "node-exporter cannot read a textfile metrics file"
+          description: "node_textfile_scrape_error is 1 on {{ $labels.instance }}: a .prom file in the textfile directory is unreadable or malformed."

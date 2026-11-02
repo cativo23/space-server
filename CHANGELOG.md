@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Image retention alerts**: `scripts/docker-retention.sh` leaves its last run time, exit code and last success time in node-exporter's textfile directory (`StateDirectory=` in the unit, read through the existing `/host` mount). New alerts `DockerRetentionStale`, `DockerRetentionFailed`, `DockerRetentionNeverReported` and `NodeTextfileScrapeError`. Exit 75 (host busy) counts as a skipped run, not a failure. node-exporter must be recreated and Prometheus restarted for it to take effect.
+
 ### Changed
 
 - **Image retention now deletes** (`--apply` in `systemd/docker-retention.service`). Twelve daily dry-runs listed only superseded versioned tags and none failed. Reinstall the unit on the host and run `systemctl daemon-reload` for it to take effect.

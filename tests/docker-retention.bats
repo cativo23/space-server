@@ -420,3 +420,83 @@ setup() {
           | grep -oE '(codes:|,) [0-9]+ ' | grep -oE '[0-9]+' | tr '\n' ' ')
   [ "$codes" = "0 1 64 70 75 " ]
 }
+
+# --- metrics for the node-exporter textfile collector -------------------------
+# The unit sets STATE_DIRECTORY (StateDirectory=); by hand it is unset and
+# nothing is written. A run writes its time and exit code every time and the
+# time of its last success only when it exits 0, carrying the previous one over.
+
+PROM() { printf '%s/docker_retention.prom' "$STATE_DIRECTORY"; }
+prom_value() { awk -v m="$1" '$1 == m { print $2 }' "$(PROM)"; }
+
+metrics_setup() {
+  export STATE_DIRECTORY="$BATS_TEST_TMPDIR/state"
+  mkdir -p "$STATE_DIRECTORY"
+}
+
+@test "metrics: a successful apply writes run time, exit code 0 and the success time, readable by others" {
+  metrics_setup
+  (umask 077; run "$SCRIPT" --apply; [ "$status" -eq 0 ])
+  [ "$(prom_value docker_retention_last_run_timestamp_seconds)" = 1792638000 ]
+  [ "$(prom_value docker_retention_last_exit_code)" = 0 ]
+  [ "$(prom_value docker_retention_last_success_timestamp_seconds)" = 1792638000 ]
+  [ "$(stat -c %a "$(PROM)")" = 644 ]
+  [ "$(ls "$STATE_DIRECTORY")" = docker_retention.prom ]
+}
+
+@test "metrics: nothing is written, and the run is unchanged, when STATE_DIRECTORY is unset" {
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  [ ! -e "$BATS_TEST_TMPDIR/state" ]
+}
+
+@test "metrics: a dry run and --help write nothing" {
+  metrics_setup
+  run "$SCRIPT" --dry-run
+  [ "$status" -eq 0 ]
+  run "$SCRIPT" --help
+  [ "$status" -eq 0 ]
+  [ -z "$(ls "$STATE_DIRECTORY")" ]
+}
+
+@test "metrics: a failed run records its exit code and keeps the previous success time" {
+  metrics_setup
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  DOCKER_RETENTION_NOW=1792700000 FAIL_ON='image rm acme/app:v2' run "$SCRIPT" --apply
+  [ "$status" -eq 1 ]
+  [ "$(prom_value docker_retention_last_run_timestamp_seconds)" = 1792700000 ]
+  [ "$(prom_value docker_retention_last_exit_code)" = 1 ]
+  [ "$(prom_value docker_retention_last_success_timestamp_seconds)" = 1792638000 ]
+}
+
+@test "metrics: a first run that fails writes no success time" {
+  metrics_setup
+  FAIL_ON='inspect --format {{.Image}}' run "$SCRIPT" --apply
+  [ "$status" -eq 70 ]
+  [ "$(prom_value docker_retention_last_exit_code)" = 70 ]
+  run ! grep -q docker_retention_last_success_timestamp_seconds "$(PROM)"
+}
+
+@test "metrics: a host busy mid-transition records exit code 75" {
+  metrics_setup
+  printf 'c1\trestarting\nc2\texited\n' > "$FIX/ps.tsv"
+  run "$SCRIPT" --apply
+  [ "$status" -eq 75 ]
+  [ "$(prom_value docker_retention_last_exit_code)" = 75 ]
+}
+
+@test "metrics: a bad configuration under --apply records exit code 64" {
+  metrics_setup
+  KEEP_LAST=0 run "$SCRIPT" --apply
+  [ "$status" -eq 64 ]
+  [ "$(prom_value docker_retention_last_exit_code)" = 64 ]
+}
+
+@test "metrics: a directory that cannot be written never changes the exit code" {
+  export STATE_DIRECTORY="$BATS_TEST_TMPDIR/missing/state"
+  run "$SCRIPT" --apply
+  [ "$status" -eq 0 ]
+  FAIL_ON='image rm acme/app:v2' run "$SCRIPT" --apply
+  [ "$status" -eq 1 ]
+}

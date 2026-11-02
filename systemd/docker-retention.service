@@ -22,6 +22,11 @@ Environment=BUILD_CACHE_UNTIL=168h
 Environment=BUILD_CACHE_MAX=2gb
 # Host-only overrides (PROTECT_REGEX during a rollback window, etc.).
 EnvironmentFile=-/etc/default/docker-retention
+# node-exporter's textfile directory: the script leaves its metrics there
+# ($STATE_DIRECTORY) and docker-compose.yml reads it through the root mount.
+# 0755 so the exporter's user can enter it.
+StateDirectory=node_exporter/textfile_collector
+StateDirectoryMode=0755
 # The unit is a copy in /etc/systemd/system, so a change to this line takes
 # effect only after reinstalling the file and `systemctl daemon-reload`.
 ExecStart=/usr/local/sbin/docker-retention --apply
