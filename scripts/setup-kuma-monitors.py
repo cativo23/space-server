@@ -61,12 +61,10 @@ MONITORS: list[tuple[str, str, list[str]]] = [
     ("status.cativo.dev",      "https://status.cativo.dev/status/public", ["200-299"]),
     # other projects sharing the host; burst-tested 15/15 stable before adding
     ("tcgvault.cativo.dev",    "https://tcgvault.cativo.dev",          ["200-299"]),
-    ("clarify.cativo.dev",     "https://clarify.cativo.dev",           ["200-299"]),
     ("app.cativo.dev",         "https://app.cativo.dev",               ["200-299"]),
     ("auth.cativo.dev",        "https://auth.cativo.dev",              ["200-299"]),
     ("admin.cativo.dev",       "https://admin.cativo.dev",             ["200-299"]),
     ("tcg.cativo.dev",         "https://tcg.cativo.dev",               ["200-299"]),
-    ("binder.cativo.dev",      "https://binder.cativo.dev",            ["200-299", "401"]),  # 401 = gated on purpose
     ("nightwire.cativo.dev",   "https://nightwire.cativo.dev",         ["200-299"]),
     # VPN-gated admin UIs — probed from inside the docker network (F47)
     ("mail.cativo.dev",        "http://webmail:80/",                   ["200-299", "301", "302"]),
